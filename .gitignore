@@ -1,0 +1,11 @@
+#Archivos
+*.orig
+
+#Carpetas
+nbproject/private/
+build/
+nbbuild/
+dist/
+nbdist/
+target/
+nbtarget/
