@@ -17,11 +17,10 @@ import java.util.logging.Logger;
  */
 public class JSON {
 
-    private static String aJson(boolean status, String message, Object object) {
+    private static String aJson(boolean status, Object object) {
         try {
             Map map = new HashMap();
             map.put("status", status);
-            map.put("message", message);
             map.put("result", object);
 
             ObjectMapper mapper = new ObjectMapper();
@@ -34,14 +33,10 @@ public class JSON {
     }
 
     public static String errorToJson(String message) {
-        return aJson(false, message, null);
-    }
-
-    public static String successToJson(String message) {
-        return aJson(true, message, null);
+        return aJson(false, message);
     }
 
     public static String successToJson(Object obj) {
-        return aJson(true, "OK", obj);
+        return aJson(true, obj);
     }
 }
