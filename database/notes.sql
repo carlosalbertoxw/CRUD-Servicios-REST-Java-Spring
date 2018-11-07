@@ -62,10 +62,7 @@ CREATE DEFINER=`root`@`localhost` PROCEDURE `deleteNote`(
 in i_id int
 )
 begin
-SET autocommit = 0;
-start transaction;
 delete from notes where id=i_id;
-commit;        
 select "OK" Mensaje;
 end ;;
 DELIMITER ;
@@ -88,10 +85,7 @@ in i_title varchar(250),
 in i_text longtext
 )
 begin
-SET autocommit = 0;
-start transaction;
 insert into notes(title,text) values(i_title,i_text);
-commit;
 select "OK" Mensaje;
 end ;;
 DELIMITER ;
@@ -115,10 +109,7 @@ in i_text longtext,
 in i_id int
 )
 begin
-SET autocommit = 0;
-start transaction;
 update notes set title=i_title,text=i_text where id=i_id;
-commit;        
 select "OK" Mensaje;
 end ;;
 DELIMITER ;

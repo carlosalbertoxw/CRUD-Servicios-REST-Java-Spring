@@ -18,7 +18,7 @@ import java.util.logging.Logger;
  */
 public class DataAccess {
 
-    protected static Connection getConnection() {
+    protected Connection getConnection() {
         Connection coneccion = null;
         try {
             //InitialContext ctx = new InitialContext();
@@ -32,7 +32,7 @@ public class DataAccess {
         return coneccion;
     }
 
-    protected static void closeConnection(Connection coneccion, PreparedStatement preparedStatement) {
+    protected void closeConnection(Connection coneccion, PreparedStatement preparedStatement) {
         try {
             if (preparedStatement != null) {
                 preparedStatement.close();

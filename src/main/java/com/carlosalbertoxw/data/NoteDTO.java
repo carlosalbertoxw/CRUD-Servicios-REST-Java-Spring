@@ -21,10 +21,17 @@ import java.util.logging.Logger;
  */
 public class NoteDTO {
 
+    private DataAccess da;
+
+    public NoteDTO() {
+        da = new DataAccess();
+    }
+
     public String delete(Note item) {
-        Connection connection = DataAccess.getConnection();
+        Connection connection = da.getConnection();
         PreparedStatement preparedStatement = null;
         try {
+            connection.setAutoCommit(false);
             int i = 1;
             String mensaje = "", sql = "CALL deleteNote(?)";
             preparedStatement = connection.prepareStatement(sql);
@@ -32,20 +39,29 @@ public class NoteDTO {
             ResultSet rs = preparedStatement.executeQuery();
             if (rs.next()) {
                 mensaje = rs.getString("Mensaje");
+                connection.commit();
+            } else {
+                connection.rollback();
             }
             return mensaje;
         } catch (SQLException e) {
             Logger.getLogger(this.getClass().getName()).log(Level.SEVERE, null, e);
+            try {
+                connection.rollback();
+            } catch (SQLException ex) {
+                Logger.getLogger(NoteDTO.class.getName()).log(Level.SEVERE, null, ex);
+            }
             return null;
         } finally {
-            DataAccess.closeConnection(connection, preparedStatement);
+            da.closeConnection(connection, preparedStatement);
         }
     }
 
     public String update(Note item) {
-        Connection connection = DataAccess.getConnection();
+        Connection connection = da.getConnection();
         PreparedStatement preparedStatement = null;
         try {
+            connection.setAutoCommit(false);
             int i = 1;
             String mensaje = "", sql = "CALL updateNote(?,?,?)";
             preparedStatement = connection.prepareStatement(sql);
@@ -55,20 +71,29 @@ public class NoteDTO {
             ResultSet rs = preparedStatement.executeQuery();
             if (rs.next()) {
                 mensaje = rs.getString("Mensaje");
+                connection.commit();
+            } else {
+                connection.rollback();
             }
             return mensaje;
         } catch (SQLException e) {
             Logger.getLogger(this.getClass().getName()).log(Level.SEVERE, null, e);
+            try {
+                connection.rollback();
+            } catch (SQLException ex) {
+                Logger.getLogger(NoteDTO.class.getName()).log(Level.SEVERE, null, ex);
+            }
             return null;
         } finally {
-            DataAccess.closeConnection(connection, preparedStatement);
+            da.closeConnection(connection, preparedStatement);
         }
     }
 
     public String save(Note item) {
-        Connection connection = DataAccess.getConnection();
+        Connection connection = da.getConnection();
         PreparedStatement preparedStatement = null;
         try {
+            connection.setAutoCommit(false);
             int i = 1;
             String mensaje = "", sql = "CALL insertNote(?,?)";
             preparedStatement = connection.prepareStatement(sql);
@@ -77,18 +102,26 @@ public class NoteDTO {
             ResultSet rs = preparedStatement.executeQuery();
             if (rs.next()) {
                 mensaje = rs.getString("Mensaje");
+                connection.commit();
+            } else {
+                connection.rollback();
             }
             return mensaje;
         } catch (SQLException e) {
             Logger.getLogger(this.getClass().getName()).log(Level.SEVERE, null, e);
+            try {
+                connection.rollback();
+            } catch (SQLException ex) {
+                Logger.getLogger(NoteDTO.class.getName()).log(Level.SEVERE, null, ex);
+            }
             return null;
         } finally {
-            DataAccess.closeConnection(connection, preparedStatement);
+            da.closeConnection(connection, preparedStatement);
         }
     }
 
     public Note get(Note item) {
-        Connection connection = DataAccess.getConnection();
+        Connection connection = da.getConnection();
         PreparedStatement preparedStatement = null;
         try {
             int i = 1;
@@ -106,12 +139,12 @@ public class NoteDTO {
             Logger.getLogger(this.getClass().getName()).log(Level.SEVERE, null, e);
             return null;
         } finally {
-            DataAccess.closeConnection(connection, preparedStatement);
+            da.closeConnection(connection, preparedStatement);
         }
     }
 
     public List<Note> list() {
-        Connection connection = DataAccess.getConnection();
+        Connection connection = da.getConnection();
         PreparedStatement preparedStatement = null;
         try {
             List<Note> list = new ArrayList<>();
@@ -130,7 +163,7 @@ public class NoteDTO {
             Logger.getLogger(this.getClass().getName()).log(Level.SEVERE, null, e);
             return null;
         } finally {
-            DataAccess.closeConnection(connection, preparedStatement);
+            da.closeConnection(connection, preparedStatement);
         }
     }
 }
