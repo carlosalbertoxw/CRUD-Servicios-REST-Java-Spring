@@ -5,6 +5,7 @@
  */
 package com.carlosalbertoxw.data;
 
+import com.carlosalbertoxw.interfaces.IDTO;
 import com.carlosalbertoxw.models.Note;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -14,28 +15,34 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.stereotype.Repository;
 
 /**
  *
  * @author Carlos
  */
-public class NoteDTO {
+@Repository
+@Qualifier("NoteDTO")
+public class NoteDTO implements IDTO {
 
-    private DataAccess da;
+    @Autowired
+    private DataAccess dataAccess;
 
     public NoteDTO() {
-        da = new DataAccess();
     }
 
-    public String delete(Note item) {
-        Connection connection = da.getConnection();
+    @Override
+    public String delete(Long id) {
+        Connection connection = dataAccess.getConnection();
         PreparedStatement preparedStatement = null;
         try {
             connection.setAutoCommit(false);
             int i = 1;
             String mensaje = "", sql = "CALL deleteNote(?)";
             preparedStatement = connection.prepareStatement(sql);
-            preparedStatement.setLong(i++, item.getId());
+            preparedStatement.setLong(i++, id);
             ResultSet rs = preparedStatement.executeQuery();
             if (rs.next()) {
                 mensaje = rs.getString("Mensaje");
@@ -53,21 +60,23 @@ public class NoteDTO {
             }
             return null;
         } finally {
-            da.closeConnection(connection, preparedStatement);
+            dataAccess.closeConnection(connection, preparedStatement);
         }
     }
 
-    public String update(Note item) {
-        Connection connection = da.getConnection();
+    @Override
+    public String update(Object object) {
+        Connection connection = dataAccess.getConnection();
         PreparedStatement preparedStatement = null;
         try {
+            Note note = (Note) object;
             connection.setAutoCommit(false);
             int i = 1;
             String mensaje = "", sql = "CALL updateNote(?,?,?)";
             preparedStatement = connection.prepareStatement(sql);
-            preparedStatement.setString(i++, item.getTitle());
-            preparedStatement.setString(i++, item.getText());
-            preparedStatement.setLong(i++, item.getId());
+            preparedStatement.setString(i++, note.getTitle());
+            preparedStatement.setString(i++, note.getText());
+            preparedStatement.setLong(i++, note.getId());
             ResultSet rs = preparedStatement.executeQuery();
             if (rs.next()) {
                 mensaje = rs.getString("Mensaje");
@@ -85,20 +94,22 @@ public class NoteDTO {
             }
             return null;
         } finally {
-            da.closeConnection(connection, preparedStatement);
+            dataAccess.closeConnection(connection, preparedStatement);
         }
     }
 
-    public String save(Note item) {
-        Connection connection = da.getConnection();
+    @Override
+    public String save(Object object) {
+        Connection connection = dataAccess.getConnection();
         PreparedStatement preparedStatement = null;
         try {
+            Note note = (Note) object;
             connection.setAutoCommit(false);
             int i = 1;
             String mensaje = "", sql = "CALL insertNote(?,?)";
             preparedStatement = connection.prepareStatement(sql);
-            preparedStatement.setString(i++, item.getTitle());
-            preparedStatement.setString(i++, item.getText());
+            preparedStatement.setString(i++, note.getTitle());
+            preparedStatement.setString(i++, note.getText());
             ResultSet rs = preparedStatement.executeQuery();
             if (rs.next()) {
                 mensaje = rs.getString("Mensaje");
@@ -116,35 +127,38 @@ public class NoteDTO {
             }
             return null;
         } finally {
-            da.closeConnection(connection, preparedStatement);
+            dataAccess.closeConnection(connection, preparedStatement);
         }
     }
 
-    public Note get(Note item) {
-        Connection connection = da.getConnection();
+    @Override
+    public Note get(Long id) {
+        Connection connection = dataAccess.getConnection();
         PreparedStatement preparedStatement = null;
         try {
             int i = 1;
             String sql = "SELECT * FROM notes WHERE id=?";
             preparedStatement = connection.prepareStatement(sql);
-            preparedStatement.setLong(i++, item.getId());
+            preparedStatement.setLong(i++, id);
             ResultSet rs = preparedStatement.executeQuery();
+            Note note = new Note();
             if (rs.next()) {
-                item.setId(rs.getLong("id"));
-                item.setTitle(rs.getString("title"));
-                item.setText(rs.getString("text"));
+                note.setId(rs.getLong("id"));
+                note.setTitle(rs.getString("title"));
+                note.setText(rs.getString("text"));
             }
-            return item;
+            return note;
         } catch (SQLException e) {
             Logger.getLogger(this.getClass().getName()).log(Level.SEVERE, null, e);
             return null;
         } finally {
-            da.closeConnection(connection, preparedStatement);
+            dataAccess.closeConnection(connection, preparedStatement);
         }
     }
 
+    @Override
     public List<Note> list() {
-        Connection connection = da.getConnection();
+        Connection connection = dataAccess.getConnection();
         PreparedStatement preparedStatement = null;
         try {
             List<Note> list = new ArrayList<>();
@@ -163,7 +177,7 @@ public class NoteDTO {
             Logger.getLogger(this.getClass().getName()).log(Level.SEVERE, null, e);
             return null;
         } finally {
-            da.closeConnection(connection, preparedStatement);
+            dataAccess.closeConnection(connection, preparedStatement);
         }
     }
 }

@@ -5,13 +5,18 @@
  */
 package com.carlosalbertoxw.rest;
 
-import com.carlosalbertoxw.data.NoteDTO;
+import com.carlosalbertoxw.interfaces.IController;
+import com.carlosalbertoxw.interfaces.IDTO;
 import com.carlosalbertoxw.models.Note;
 import com.carlosalbertoxw.utilities.JSON;
 import com.carlosalbertoxw.utilities.Mensaje;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -24,23 +29,23 @@ import org.springframework.web.bind.annotation.RestController;
  * @author Carlos
  */
 @RestController
-public class NoteRCTL {
+public class NoteRCTL implements IController {
 
-    private NoteDTO dto;
+    @Autowired
+    @Qualifier("NoteDTO")
+    private IDTO noteDTO;
     private String token;
 
     public NoteRCTL() {
-        this.dto = new NoteDTO();
         this.token = "qwerty";
     }
 
+    @Override
     @RequestMapping(value = "/api/notes/{id}", method = RequestMethod.DELETE, produces = "application/json;charset=utf-8")
-    private String delete(@PathVariable("id") Long id, @RequestHeader("Authentication") String authentication) {
+    public Map<String, Object> delete(@RequestHeader("Authentication") String authentication, @PathVariable("id") Long id) {
         try {
             if (authentication.equals(this.token)) {
-                Note item = new Note();
-                item.setId(id);
-                String mensaje = dto.delete(item);
+                String mensaje = noteDTO.delete(id);
                 if (mensaje.equals("OK")) {
                     return JSON.successToJson(Mensaje.SUCCESSFUL_DELETE);
                 } else {
@@ -55,12 +60,14 @@ public class NoteRCTL {
         }
     }
 
+    @Override
     @RequestMapping(value = "/api/notes/{id}", method = RequestMethod.PUT, produces = "application/json;charset=utf-8")
-    private String update(@PathVariable("id") Long id, @RequestBody Note item, @RequestHeader("Authentication") String authentication) {
+    public Map<String, Object> update(@RequestHeader("Authentication") String authentication, @PathVariable("id") Long id, @RequestBody Object object) {
         try {
             if (authentication.equals(this.token)) {
-                item.setId(id);
-                String mensaje = dto.update(item);
+                Note note = (Note) object;
+                note.setId(id);
+                String mensaje = noteDTO.update(note);
                 if (mensaje.equals("OK")) {
                     return JSON.successToJson(Mensaje.SUCCESSFUL_UPDATE);
                 } else {
@@ -75,13 +82,14 @@ public class NoteRCTL {
         }
     }
 
+    @Override
     @RequestMapping(value = "/api/notes", method = RequestMethod.POST, produces = "application/json;charset=utf-8")
-    private String save(
-            @RequestBody Note item,
-            @RequestHeader("Authentication") String authentication) {
+    public Map<String, Object> save(@RequestHeader("Authentication") String authentication, @RequestBody Map map) {
         try {
             if (authentication.equals(token)) {
-                String mensaje = dto.save(item);
+                ObjectMapper mapper = new ObjectMapper();
+                Note note = mapper.convertValue(map, Note.class);
+                String mensaje = noteDTO.save(note);
                 if (mensaje.equals("OK")) {
                     return JSON.successToJson(Mensaje.SUCCESSFUL_SAVE);
                 } else {
@@ -97,12 +105,10 @@ public class NoteRCTL {
     }
 
     @RequestMapping(value = "/api/notes/{id}", method = RequestMethod.GET, produces = "application/json;charset=utf-8")
-    private String get(@PathVariable("id") Long id, @RequestHeader("Authentication") String authentication) {
+    public Map<String, Object> get(@RequestHeader("Authentication") String authentication, @PathVariable("id") Long id) {
         try {
             if (authentication.equals(this.token)) {
-                Note item = new Note();
-                item.setId(id);
-                item = dto.get(item);
+                Note item = noteDTO.get(id);
                 if (item != null) {
                     return JSON.successToJson(item);
                 } else {
@@ -117,11 +123,12 @@ public class NoteRCTL {
         }
     }
 
+    @Override
     @RequestMapping(value = "/api/notes", method = RequestMethod.GET, produces = "application/json;charset=utf-8")
-    private String list(@RequestHeader("Authentication") String authentication) {
+    public Map<String, Object> list(@RequestHeader("Authentication") String authentication) {
         try {
             if (authentication.equals(this.token)) {
-                List<Note> list = dto.list();
+                List<Note> list = noteDTO.list();
                 if (list != null) {
                     return JSON.successToJson(list);
                 } else {

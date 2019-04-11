@@ -5,7 +5,6 @@
  */
 package com.carlosalbertoxw.utilities;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Level;
@@ -17,26 +16,24 @@ import java.util.logging.Logger;
  */
 public class JSON {
 
-    private static String aJson(boolean status, Object object) {
+    private static Map<String, Object> aJson(Boolean status, Object object) {
         try {
             Map map = new HashMap();
             map.put("status", status);
             map.put("result", object);
 
-            ObjectMapper mapper = new ObjectMapper();
-
-            return mapper.writeValueAsString(map);
+            return map;
         } catch (Exception e) {
             Logger.getLogger(JSON.class.getName()).log(Level.SEVERE, null, e);
             return null;
         }
     }
 
-    public static String errorToJson(String message) {
+    public static Map<String, Object> errorToJson(String message) {
         return aJson(false, message);
     }
 
-    public static String successToJson(Object obj) {
+    public static Map<String, Object> successToJson(Object obj) {
         return aJson(true, obj);
     }
 }
