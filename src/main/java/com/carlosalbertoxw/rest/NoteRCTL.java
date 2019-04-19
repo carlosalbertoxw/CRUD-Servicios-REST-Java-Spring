@@ -5,12 +5,10 @@
  */
 package com.carlosalbertoxw.rest;
 
-import com.carlosalbertoxw.interfaces.IController;
-import com.carlosalbertoxw.interfaces.IDTO;
+import com.carlosalbertoxw.data.NoteDTO;
 import com.carlosalbertoxw.models.Note;
 import com.carlosalbertoxw.utilities.JSON;
 import com.carlosalbertoxw.utilities.Mensaje;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
@@ -29,18 +27,17 @@ import org.springframework.web.bind.annotation.RestController;
  * @author Carlos
  */
 @RestController
-public class NoteRCTL implements IController {
+public class NoteRCTL {
 
     @Autowired
     @Qualifier("NoteDTO")
-    private IDTO noteDTO;
+    private NoteDTO noteDTO;
     private String token;
 
     public NoteRCTL() {
         this.token = "qwerty";
     }
 
-    @Override
     @RequestMapping(value = "/api/notes/{id}", method = RequestMethod.DELETE, produces = "application/json;charset=utf-8")
     public Map<String, Object> delete(@RequestHeader("Authentication") String authentication, @PathVariable("id") Long id) {
         try {
@@ -60,12 +57,10 @@ public class NoteRCTL implements IController {
         }
     }
 
-    @Override
     @RequestMapping(value = "/api/notes/{id}", method = RequestMethod.PUT, produces = "application/json;charset=utf-8")
-    public Map<String, Object> update(@RequestHeader("Authentication") String authentication, @PathVariable("id") Long id, @RequestBody Object object) {
+    public Map<String, Object> update(@RequestHeader("Authentication") String authentication, @PathVariable("id") Long id, @RequestBody Note note) {
         try {
             if (authentication.equals(this.token)) {
-                Note note = (Note) object;
                 note.setId(id);
                 String mensaje = noteDTO.update(note);
                 if (mensaje.equals("OK")) {
@@ -82,13 +77,10 @@ public class NoteRCTL implements IController {
         }
     }
 
-    @Override
     @RequestMapping(value = "/api/notes", method = RequestMethod.POST, produces = "application/json;charset=utf-8")
-    public Map<String, Object> save(@RequestHeader("Authentication") String authentication, @RequestBody Map map) {
+    public Map<String, Object> save(@RequestHeader("Authentication") String authentication, @RequestBody Note note) {
         try {
             if (authentication.equals(token)) {
-                ObjectMapper mapper = new ObjectMapper();
-                Note note = mapper.convertValue(map, Note.class);
                 String mensaje = noteDTO.save(note);
                 if (mensaje.equals("OK")) {
                     return JSON.successToJson(Mensaje.SUCCESSFUL_SAVE);
@@ -123,7 +115,6 @@ public class NoteRCTL implements IController {
         }
     }
 
-    @Override
     @RequestMapping(value = "/api/notes", method = RequestMethod.GET, produces = "application/json;charset=utf-8")
     public Map<String, Object> list(@RequestHeader("Authentication") String authentication) {
         try {

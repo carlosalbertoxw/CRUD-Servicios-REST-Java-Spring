@@ -5,7 +5,6 @@
  */
 package com.carlosalbertoxw.data;
 
-import com.carlosalbertoxw.interfaces.IDTO;
 import com.carlosalbertoxw.models.Note;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -25,7 +24,7 @@ import org.springframework.stereotype.Repository;
  */
 @Repository
 @Qualifier("NoteDTO")
-public class NoteDTO implements IDTO {
+public class NoteDTO {
 
     @Autowired
     private DataAccess dataAccess;
@@ -33,7 +32,6 @@ public class NoteDTO implements IDTO {
     public NoteDTO() {
     }
 
-    @Override
     public String delete(Long id) {
         Connection connection = dataAccess.getConnection();
         PreparedStatement preparedStatement = null;
@@ -64,7 +62,6 @@ public class NoteDTO implements IDTO {
         }
     }
 
-    @Override
     public String update(Object object) {
         Connection connection = dataAccess.getConnection();
         PreparedStatement preparedStatement = null;
@@ -98,7 +95,6 @@ public class NoteDTO implements IDTO {
         }
     }
 
-    @Override
     public String save(Object object) {
         Connection connection = dataAccess.getConnection();
         PreparedStatement preparedStatement = null;
@@ -131,7 +127,6 @@ public class NoteDTO implements IDTO {
         }
     }
 
-    @Override
     public Note get(Long id) {
         Connection connection = dataAccess.getConnection();
         PreparedStatement preparedStatement = null;
@@ -156,7 +151,6 @@ public class NoteDTO implements IDTO {
         }
     }
 
-    @Override
     public List<Note> list() {
         Connection connection = dataAccess.getConnection();
         PreparedStatement preparedStatement = null;
