@@ -1,6 +1,6 @@
 # Etapa de build: compila y empaqueta el jar (sin tests: las pruebas de
 # integracion requieren Docker/Testcontainers, no disponible dentro del build).
-FROM maven:3.9-eclipse-temurin-17 AS build
+FROM maven:3-eclipse-temurin-26 AS build
 WORKDIR /app
 COPY pom.xml .
 RUN mvn -B -q dependency:go-offline
