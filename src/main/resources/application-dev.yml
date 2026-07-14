@@ -1,0 +1,5 @@
+# Perfil 'dev': desarrollo local. No fuerza HTTPS (se sirve por HTTP plano) y
+# el DevDataSeeder crea la API key de desarrollo y notas de ejemplo.
+app:
+  security:
+    https-enforced: false

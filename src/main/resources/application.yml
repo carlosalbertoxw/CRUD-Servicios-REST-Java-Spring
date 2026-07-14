@@ -1,0 +1,78 @@
+spring:
+  application:
+    name: notes-api
+
+  # La aplicacion que SIRVE trafico se conecta con minimo privilegio (solo DML) y
+  # NO gestiona el esquema: Flyway esta deshabilitado aqui. Las migraciones se
+  # ejecutan como paso aparte (perfil 'migrate', con un usuario con DDL) para que
+  # el proceso de la API nunca disponga de credenciales capaces de alterar tablas.
+  datasource:
+    url: ${DB_URL:jdbc:mysql://localhost:3306/notes}
+    username: ${DB_USER:notes_app}
+    password: ${DB_PASSWORD:notes_app_password}
+    hikari:
+      # Con varias replicas, cuida que replicas * pool < max_connections de MySQL (151 por defecto).
+      maximum-pool-size: 20
+
+  flyway:
+    enabled: false
+    baseline-on-migrate: true
+    locations: classpath:db/migration
+
+  # Errores en formato RFC 7807 (ProblemDetail), sin filtrar detalles internos.
+  mvc:
+    problemdetails:
+      enabled: true
+
+  jackson:
+    default-property-inclusion: non_null
+
+server:
+  # Detras de un reverse proxy que termina TLS. La estrategia 'native' usa el
+  # RemoteIpValve de Tomcat, que SOLO acepta X-Forwarded-* desde proxies
+  # confiables (por defecto rangos privados). Ajusta la lista con la propiedad
+  # server.tomcat.remoteip.internal-proxies (equivalente a KnownProxies/Networks).
+  forward-headers-strategy: native
+
+# Endurecimiento para produccion. Se desactiva en el perfil 'dev' (ver
+# application-dev.yml) y en las pruebas. Con https-enforced=true la app redirige
+# HTTP -> HTTPS (308) y emite HSTS; asume TLS terminado en el reverse proxy.
+app:
+  security:
+    https-enforced: true
+  # Tamano maximo del cuerpo de la peticion (las notas se limitan a 100.000
+  # caracteres; no hay razon para aceptar cuerpos mayores a ~1 MB).
+  max-request-body-bytes: 1048576
+
+# Rate limiting por IP (ventana fija).
+rate-limiting:
+  permit-limit: 100
+  window-seconds: 60
+
+# TTL del cache en memoria de API keys validadas.
+authentication:
+  key-cache-seconds: 60
+
+# Health checks: /actuator/health/liveness (proceso vivo) y
+# /actuator/health/readiness (incluye la BD alcanzable).
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      group:
+        readiness:
+          include: readinessState,db
+      show-details: never
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+logging:
+  level:
+    org.springframework.jdbc.core: warn

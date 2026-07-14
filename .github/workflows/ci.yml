@@ -1,0 +1,52 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurar JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+
+      # Las pruebas de integracion levantan MySQL con Testcontainers
+      # (Docker viene preinstalado en los runners de ubuntu-latest).
+      - name: Compilar y probar
+        run: mvn -B verify
+
+  dependency-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configurar JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+
+      # Cachea la base de datos de vulnerabilidades (NVD) entre ejecuciones para
+      # que la auditoria sea rapida y fiable.
+      - name: Cachear base NVD
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository/org/owasp/dependency-check-data
+          key: dependency-check-${{ runner.os }}
+
+      # Bloquea el build si hay dependencias con CVEs (CVSS >= 7). Requiere el
+      # secreto NVD_API_KEY para que la descarga de la base NVD sea fiable
+      # (https://nvd.nist.gov/developers/request-an-api-key).
+      - name: Auditar dependencias vulnerables (OWASP dependency-check)
+        env:
+          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+        run: mvn -B -Psecurity verify -DskipTests

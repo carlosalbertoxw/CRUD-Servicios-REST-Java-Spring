@@ -1,0 +1,64 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: notes-mysql
+    # Convencion del proyecto: todas las fechas se guardan en UTC.
+    command: --default-time-zone=+00:00
+    environment:
+      MYSQL_ROOT_PASSWORD: root_password
+      MYSQL_DATABASE: notes
+      MYSQL_USER: notes_user          # usuario con DDL, reservado a las migraciones (Flyway)
+      MYSQL_PASSWORD: notes_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - notes-mysql-data:/var/lib/mysql
+      - ./db/init-users.sql:/docker-entrypoint-initdb.d/init-users.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-u", "root", "-proot_password"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  # Aplica el esquema (Flyway) con el usuario notes_user (DDL) y termina. Reusa la
+  # misma imagen de la app en el perfil 'migrate'; corre una sola vez cuando MySQL
+  # esta sano. Asi el proceso que sirve trafico nunca tiene credenciales con DDL.
+  migrations:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: ["--spring.profiles.active=migrate"]
+    environment:
+      FLYWAY_DB_URL: "jdbc:mysql://mysql:3306/notes"
+      FLYWAY_DB_USER: notes_user
+      FLYWAY_DB_PASSWORD: notes_password
+    depends_on:
+      mysql:
+        condition: service_healthy
+    restart: "no"
+
+  # La API se conecta como notes_app (solo DML) y arranca cuando las migraciones
+  # terminaron correctamente. El perfil 'dev' siembra la key de desarrollo y notas
+  # de ejemplo, y sirve por HTTP plano (sin forzar HTTPS).
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: notes-api
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: dev
+      DB_URL: "jdbc:mysql://mysql:3306/notes"
+      DB_USER: notes_app
+      DB_PASSWORD: notes_app_password
+    depends_on:
+      mysql:
+        condition: service_healthy
+      migrations:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+volumes:
+  notes-mysql-data:

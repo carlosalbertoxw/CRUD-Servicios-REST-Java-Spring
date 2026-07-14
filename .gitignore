@@ -1,11 +1,31 @@
-#Archivos
+# Build
+target/
+build/
+dist/
 *.orig
 
-#Carpetas
+# Logs
+*.log
+
+# IDE - Eclipse
+.settings/
+.classpath
+.project
+.factorypath
+
+# IDE - IntelliJ
+.idea/
+*.iml
+
+# IDE - NetBeans
 nbproject/private/
-build/
 nbbuild/
-dist/
 nbdist/
-target/
 nbtarget/
+
+# IDE - VS Code
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
