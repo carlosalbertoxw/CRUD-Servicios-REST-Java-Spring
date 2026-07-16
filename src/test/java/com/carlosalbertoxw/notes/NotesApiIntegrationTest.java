@@ -205,7 +205,7 @@ class NotesApiIntegrationTest {
         String hugeText = "a".repeat(1_100_000); // > 1 MB
         ResponseEntity<String> response = rest.exchange("/api/notes", HttpMethod.POST,
                 authed("{\"title\":\"grande\",\"text\":\"" + hugeText + "\"}"), String.class);
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.PAYLOAD_TOO_LARGE);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONTENT_TOO_LARGE);
     }
 
     @Test

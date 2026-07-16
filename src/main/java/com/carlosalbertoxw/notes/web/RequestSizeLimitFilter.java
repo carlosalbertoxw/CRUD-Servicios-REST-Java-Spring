@@ -30,7 +30,7 @@ public class RequestSizeLimitFilter extends OncePerRequestFilter {
 
         long contentLength = request.getContentLengthLong();
         if (contentLength > maxBytes) {
-            problems.write(response, HttpStatus.PAYLOAD_TOO_LARGE,
+            problems.write(response, HttpStatus.CONTENT_TOO_LARGE,
                     "El cuerpo de la peticion supera el maximo de " + maxBytes + " bytes.");
             return;
         }
