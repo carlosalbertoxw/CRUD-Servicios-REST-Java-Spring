@@ -22,6 +22,9 @@
         <java.version>17</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <springdoc.version>3.0.3</springdoc.version>
+        <!-- Boot 4.1.0 trae Tomcat 11.0.22, que tiene CVEs con CVSS >= 7
+             (CVE-2026-55276, -53434, -59083, -59084); 11.0.24 los corrige. -->
+        <tomcat.version>11.0.24</tomcat.version>
         <dependency-check.version>12.2.2</dependency-check.version>
     </properties>
 
