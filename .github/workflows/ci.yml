@@ -42,11 +42,13 @@ jobs:
 
       # Cachea la base de datos de vulnerabilidades (NVD) entre ejecuciones para
       # que la auditoria sea rapida y fiable.
-      # La clave incluye el run_id para que cada ejecucion guarde la base
-      # actualizada (con una clave fija, un hit exacto nunca re-guarda y la
-      # base quedaria congelada); restore-keys recupera la mas reciente.
-      - name: Cachear base NVD
-        uses: actions/cache@v6
+      # Restore/save separados con if:always(): aunque la descarga del NVD
+      # falle a medias (su API es inestable), el avance se guarda y el
+      # siguiente run REANUDA en vez de empezar de cero. La clave incluye el
+      # run_id porque una clave fija con hit exacto nunca re-guardaria la
+      # base actualizada; restore-keys recupera la mas reciente.
+      - name: Restaurar base NVD
+        uses: actions/cache/restore@v6
         with:
           path: ~/.m2/repository/org/owasp/dependency-check-data
           key: dependency-check-${{ runner.os }}-${{ github.run_id }}
@@ -60,3 +62,10 @@ jobs:
         env:
           NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
         run: mvn -B -Psecurity verify -DskipTests
+
+      - name: Guardar base NVD (incluso si la auditoria fallo)
+        if: always()
+        uses: actions/cache/save@v6
+        with:
+          path: ~/.m2/repository/org/owasp/dependency-check-data
+          key: dependency-check-${{ runner.os }}-${{ github.run_id }}

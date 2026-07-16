@@ -141,6 +141,11 @@
                             <!-- Falla el build si hay una vulnerabilidad con CVSS >= 7 (alta/critica). -->
                             <failBuildOnCVSS>7</failBuildOnCVSS>
                             <nvdApiKeyEnvironmentVariable>NVD_API_KEY</nvdApiKeyEnvironmentVariable>
+                            <!-- La API del NVD es inestable: mas pausa entre
+                                 peticiones y mas reintentos evitan que un 503
+                                 transitorio tumbe la descarga. -->
+                            <nvdApiDelay>4000</nvdApiDelay>
+                            <nvdMaxRetryCount>20</nvdMaxRetryCount>
                         </configuration>
                         <executions>
                             <execution>
