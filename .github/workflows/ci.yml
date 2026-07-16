@@ -26,9 +26,10 @@ jobs:
 
   dependency-audit:
     runs-on: ubuntu-latest
-    # Sin NVD_API_KEY la descarga de la base NVD queda estrangulada y el job
-    # puede colgarse horas; el timeout corta a tiempo.
-    timeout-minutes: 30
+    # La primera descarga completa de la base NVD tarda >30 min incluso con
+    # NVD_API_KEY; con la cache guardada, las siguientes ejecuciones bajan a
+    # unos minutos. El timeout evita cuelgues de horas si el NVD falla.
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v7
 
@@ -41,11 +42,16 @@ jobs:
 
       # Cachea la base de datos de vulnerabilidades (NVD) entre ejecuciones para
       # que la auditoria sea rapida y fiable.
+      # La clave incluye el run_id para que cada ejecucion guarde la base
+      # actualizada (con una clave fija, un hit exacto nunca re-guarda y la
+      # base quedaria congelada); restore-keys recupera la mas reciente.
       - name: Cachear base NVD
         uses: actions/cache@v6
         with:
           path: ~/.m2/repository/org/owasp/dependency-check-data
-          key: dependency-check-${{ runner.os }}
+          key: dependency-check-${{ runner.os }}-${{ github.run_id }}
+          restore-keys: |
+            dependency-check-${{ runner.os }}-
 
       # Bloquea el build si hay dependencias con CVEs (CVSS >= 7). Requiere el
       # secreto NVD_API_KEY para que la descarga de la base NVD sea fiable
