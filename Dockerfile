@@ -8,7 +8,7 @@ COPY src ./src
 RUN mvn -B -q -DskipTests package
 
 # Etapa de runtime: imagen JRE minima con solo el jar.
-FROM eclipse-temurin:17-jre-alpine
+FROM eclipse-temurin:25-jre-alpine
 WORKDIR /app
 RUN addgroup -S app && adduser -S app -G app
 COPY --from=build /app/target/notes-api-*.jar app.jar
