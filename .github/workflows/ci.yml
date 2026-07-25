@@ -87,7 +87,7 @@ jobs:
       # Solo cuando hay algo que investigar: en verde nadie abre estos reportes.
       - name: Publicar reportes
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: reportes-pruebas-unitarias
           path: target/surefire-reports/
@@ -119,7 +119,7 @@ jobs:
 
       - name: Publicar reportes
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: reportes-pruebas-integracion
           path: target/failsafe-reports/
