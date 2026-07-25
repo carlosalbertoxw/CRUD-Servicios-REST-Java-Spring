@@ -189,8 +189,77 @@ CRUD, validaciones, paginación, búsqueda, aislamiento por cliente y health
 checks.
 
 En cada push, GitHub Actions ([.github/workflows/ci.yml](.github/workflows/ci.yml))
-corre cada suite en su propio job (`unit-tests` e `integration-tests`, en
-paralelo) y audita dependencias vulnerables.
+corre cada suite en su propio job. `integration-tests` depende de `unit-tests`:
+si la lógica básica está rota, no se gasta un contenedor MySQL en confirmarlo.
+
+## Auditoría de dependencias
+
+[OWASP dependency-check](https://owasp.org/www-project-dependency-check/) contrasta
+el árbol de dependencias contra la base de vulnerabilidades del
+[NVD](https://nvd.nist.gov/) y **falla el build si encuentra un CVE con CVSS ≥ 7**
+(alta o crítica). Vive en el perfil `security` del [pom.xml](pom.xml) y en el job
+`dependency-audit` del workflow.
+
+### API key del NVD
+
+Sin key, el NVD limita las peticiones de forma agresiva y la descarga de la base
+tarda horas o se corta a medias. Es gratis y llega por correo en unos minutos:
+
+1. Pídela en [nvd.nist.gov/developers/request-an-api-key](https://nvd.nist.gov/developers/request-an-api-key).
+2. En el repo, **Settings → Secrets and variables → Actions → New repository secret**,
+   con nombre exactamente `NVD_API_KEY` (es el que lee el workflow y el que el
+   plugin espera vía `nvdApiKeyEnvironmentVariable`).
+
+El job la inyecta como variable de entorno, nunca como argumento de línea de
+comandos (los argumentos quedan en los logs; las variables de entorno no):
+
+```yaml
+- name: Auditar dependencias vulnerables (OWASP dependency-check)
+  env:
+    NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
+  run: mvn -B -Psecurity verify -DskipTests
+```
+
+El job funciona sin el secreto, pero de forma lenta e inestable. La base
+descargada se cachea entre ejecuciones (`~/.m2/repository/org/owasp/dependency-check-data`),
+así que solo la primera vez paga el coste completo.
+
+### En local
+
+```bash
+export NVD_API_KEY=tu-key      # PowerShell: $env:NVD_API_KEY = "tu-key"
+mvn -Psecurity verify -DskipTests
+```
+
+La primera ejecución descarga la base completa del NVD (>30 min); las siguientes
+la actualizan de forma incremental y tardan pocos minutos. El informe queda en
+`target/dependency-check-report.html`.
+
+### Cuando la auditoría falla
+
+El informe indica qué dependencia y qué CVE. Tres salidas, de preferible a
+último recurso:
+
+1. **Subir la dependencia directa** a una versión ya parcheada.
+2. **Forzar la versión de una transitiva** que aún no llega por el BOM de Spring
+   Boot, con una propiedad de versión. Precedente en este repo: `tomcat.version`
+   está fijado a 11.0.24 porque la versión que trae Boot 4.1.0 arrastra CVEs con
+   CVSS ≥ 7.
+3. **Suprimir un falso positivo** — dependency-check identifica librerías por
+   heurística y a veces se equivoca de producto. Requiere añadir un
+   `<suppressionFiles>` a la configuración del plugin (hoy no hay ninguno) y
+   documentar en el propio archivo por qué esa alerta no aplica. Nunca subas el
+   umbral de `failBuildOnCVSS` para silenciar un hallazgo puntual.
+
+### Relación con Dependabot
+
+Son complementarios y no se solapan:
+
+| | Qué hace | Cadencia |
+|---|---|---|
+| [Dependabot](.github/dependabot.yml) | Abre PRs de actualización de versiones | Mensual |
+| Dependabot (alertas) | Abre PRs ante un advisory de seguridad | Inmediato, sin depender del intervalo |
+| dependency-check | Bloquea el merge si una dependencia vulnerable llega al build | En cada run de CI |
 
 ## Configuración
 
