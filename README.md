@@ -154,16 +154,43 @@ curl -X DELETE http://localhost:8080/api/notes/1 -H "X-Api-Key: local-dev.dev-se
 
 ## Pruebas
 
+Hay dos suites, separadas por convención de nombre y por plugin:
+
+| Suite | Clases | Plugin / fase | Requiere Docker |
+|-------|--------|---------------|-----------------|
+| Unitarias | `*Test` | Surefire (`test`) | No |
+| Integración | `*IT` | Failsafe (`verify`) | Sí |
+
 ```bash
+# Solo unitarias (rápido, sin Docker)
+mvn test
+```
+
+```bash
+# Ambas suites
 mvn verify
 ```
 
-Las pruebas de integración levantan un MySQL efímero con
+```bash
+# Solo las de integración
+mvn verify -DskipUnitTests=true
+```
+
+Las **pruebas unitarias** cubren la lógica que no necesita infraestructura:
+autenticación por API key (formato del encabezado, rutas públicas, secreto
+incorrecto, identidad publicada en la petición), cache de keys, rate limiting por
+IP, límite de tamaño del cuerpo, forzado de HTTPS/HSTS, respuestas RFC 7807 y las
+restricciones de validación del cuerpo de petición.
+
+Las **pruebas de integración** levantan un MySQL efímero con
 [Testcontainers](https://testcontainers.com/) (requiere Docker), le aplican las
 migraciones reales (Flyway) y ejercitan la API completa: autenticación, ciclo
 CRUD, validaciones, paginación, búsqueda, aislamiento por cliente y health
-checks. En cada push, GitHub Actions ([.github/workflows/ci.yml](.github/workflows/ci.yml))
-compila, corre las pruebas y audita dependencias vulnerables.
+checks.
+
+En cada push, GitHub Actions ([.github/workflows/ci.yml](.github/workflows/ci.yml))
+corre cada suite en su propio job (`unit-tests` e `integration-tests`, en
+paralelo) y audita dependencias vulnerables.
 
 ## Configuración
 
@@ -204,7 +231,7 @@ allí las keys se crean con SQL.
 ├── docker-compose.yml               # Stack completo: MySQL 8.4 (UTC) + API
 ├── Dockerfile                       # Imagen de la API (build Maven -> runtime JRE)
 ├── db/init-users.sql                # Usuario de aplicación con mínimo privilegio
-├── .github/workflows/ci.yml         # CI: build + tests + auditoría de dependencias
+├── .github/workflows/ci.yml         # CI: unitarias + integración + auditoría de dependencias
 ├── src/main/java/com/carlosalbertoxw/notes/
 │   ├── auth/                        # API key (hash SHA-256, revocación, cache, fail-closed)
 │   ├── config/                      # Filtros, resolver, OpenAPI, seed de desarrollo
@@ -214,7 +241,7 @@ allí las keys se crean con SQL.
 ├── src/main/resources/
 │   ├── application.yml              # Configuración
 │   └── db/migration/                # Migraciones Flyway (esquema)
-└── src/test/                        # Pruebas de integración (Testcontainers)
+└── src/test/                        # Pruebas: *Test (unitarias) y *IT (Testcontainers)
 ```
 
 Tecnologías: Spring Boot 3 (Spring Web MVC, Spring JDBC, Actuator, Validation),

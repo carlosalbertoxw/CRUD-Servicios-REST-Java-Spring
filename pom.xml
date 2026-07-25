@@ -22,6 +22,10 @@
         <java.version>17</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <springdoc.version>3.0.3</springdoc.version>
+        <!-- Permite ejecutar solo las pruebas de integracion:
+             "mvn verify -DskipUnitTests=true". Se usa <skip> (y no <skipTests>)
+             para no pisar el -DskipTests que usa la auditoria de dependencias. -->
+        <skipUnitTests>false</skipUnitTests>
         <!-- Boot 4.1.0 trae Tomcat 11.0.22, que tiene CVEs con CVSS >= 7
              (CVE-2026-55276, -53434, -59083, -59084); 11.0.24 los corrige. -->
         <tomcat.version>11.0.24</tomcat.version>
@@ -122,6 +126,33 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+
+            <!--
+              Separacion de las dos suites por convencion de nombre:
+                - Surefire (fase test)   -> *Test: pruebas unitarias, sin Spring ni Docker.
+                - Failsafe (fase verify) -> *IT:   pruebas de integracion con Testcontainers.
+              Asi "mvn test" es rapido y no necesita Docker, y "mvn verify" corre ambas.
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <skip>${skipUnitTests}</skip>
+                </configuration>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-failsafe-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <goals>
+                            <goal>integration-test</goal>
+                            <!-- verify es el que falla el build si una IT fallo. -->
+                            <goal>verify</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>

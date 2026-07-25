@@ -30,12 +30,15 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Testcontainers, le aplican las migraciones reales (Flyway) y ejercitan la API
  * completa (autenticacion, ciclo CRUD, validaciones, paginacion, busqueda,
  * aislamiento por cliente y health checks).
+ *
+ * <p>Por el sufijo {@code IT} las ejecuta Failsafe en la fase {@code verify}
+ * (requiere Docker), no Surefire en {@code test}.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureTestRestTemplate
 @ActiveProfiles("test")
 @Testcontainers
-class NotesApiIntegrationTest {
+class NotesApiIT {
 
     @Container
     static final MySQLContainer<?> MYSQL = new MySQLContainer<>(DockerImageName.parse("mysql:8.4"))

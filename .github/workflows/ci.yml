@@ -5,26 +5,21 @@ on:
     branches: [master, "upgrade/**"]
   pull_request:
 
+# Un push nuevo sobre la misma rama deja obsoleto al run anterior: cancelarlo
+# libera runners de inmediato (sobre todo la auditoria, que puede ocupar uno
+# durante una hora). En master no se cancela: cada commit integrado conserva su
+# propio resultado de CI.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
+
 jobs:
-  build-test:
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Configurar JDK 17
-        uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: "17"
-          cache: maven
-
-      # Las pruebas de integracion levantan MySQL con Testcontainers
-      # (Docker viene preinstalado en los runners de ubuntu-latest).
-      - name: Compilar y probar
-        run: mvn -B verify
-
+  # Va primero y SIN needs a proposito: es el job mas largo del workflow, asi
+  # que tiene que arrancar en el segundo cero y correr en paralelo con las
+  # pruebas. Encadenarlo detras de estas solo sumaria su duracion a la ruta
+  # critica sin ahorrar nada.
   dependency-audit:
+    name: Auditoria de dependencias
     runs-on: ubuntu-latest
     # La primera descarga completa de la base NVD tarda >30 min incluso con
     # NVD_API_KEY; con la cache guardada, las siguientes ejecuciones bajan a
@@ -69,3 +64,63 @@ jobs:
         with:
           path: ~/.m2/repository/org/owasp/dependency-check-data
           key: dependency-check-${{ runner.os }}-${{ github.run_id }}
+
+  # Suite rapida (Surefire, clases *Test): logica pura, sin Spring ni Docker.
+  # Da feedback en menos de un minuto y es la que corta antes en un PR.
+  unit-tests:
+    name: Pruebas unitarias
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Configurar JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+
+      - name: Ejecutar pruebas unitarias
+        run: mvn -B test
+
+      # Solo cuando hay algo que investigar: en verde nadie abre estos reportes.
+      - name: Publicar reportes
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reportes-pruebas-unitarias
+          path: target/surefire-reports/
+          if-no-files-found: ignore
+
+  # Suite lenta (Failsafe, clases *IT): levanta MySQL con Testcontainers
+  # (Docker viene preinstalado en los runners de ubuntu-latest) y ejercita la
+  # API completa. -DskipUnitTests evita repetir la suite del job anterior.
+  #
+  # Depende de unit-tests: si la logica basica ya esta rota, no tiene sentido
+  # gastar varios minutos y un contenedor MySQL en confirmarlo.
+  integration-tests:
+    name: Pruebas de integracion
+    needs: unit-tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Configurar JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+
+      - name: Ejecutar pruebas de integracion
+        run: mvn -B verify -DskipUnitTests=true
+
+      - name: Publicar reportes
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reportes-pruebas-integracion
+          path: target/failsafe-reports/
+          if-no-files-found: ignore
