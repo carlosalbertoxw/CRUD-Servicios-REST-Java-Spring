@@ -21,7 +21,7 @@
     <properties>
         <java.version>17</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <springdoc.version>3.0.3</springdoc.version>
+        <springdoc.version>3.1.0</springdoc.version>
         <!-- Permite ejecutar solo las pruebas de integracion:
              "mvn verify -DskipUnitTests=true". Se usa <skip> (y no <skipTests>)
              para no pisar el -DskipTests que usa la auditoria de dependencias. -->
