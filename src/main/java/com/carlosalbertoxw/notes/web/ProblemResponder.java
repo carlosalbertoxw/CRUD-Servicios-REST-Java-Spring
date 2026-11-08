@@ -1,13 +1,12 @@
 package com.carlosalbertoxw.notes.web;
 
-import tools.jackson.databind.json.JsonMapper;
 import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ProblemDetail;
 import org.springframework.stereotype.Component;
-
-import java.io.IOException;
+import tools.jackson.databind.json.JsonMapper;
 
 /**
  * Escribe respuestas de error en formato RFC 7807 ({@link ProblemDetail}) desde

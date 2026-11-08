@@ -8,7 +8,7 @@ import org.springframework.boot.context.properties.ConfigurationPropertiesScan;
  * Punto de entrada de la API de notas.
  *
  * <p>Servicio REST con autenticacion por API key (hasheada, con revocacion y
- * expiracion), notas privadas por cliente, migraciones de esquema, paginacion
+ * expiracion), notas privadas por cliente, paginacion
  * por keyset, busqueda de texto completo, rate limiting, health checks y
  * documentacion OpenAPI interactiva.
  */

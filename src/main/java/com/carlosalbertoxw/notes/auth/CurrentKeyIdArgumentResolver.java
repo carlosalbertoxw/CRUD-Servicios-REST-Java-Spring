@@ -7,7 +7,7 @@ import org.springframework.web.method.support.HandlerMethodArgumentResolver;
 import org.springframework.web.method.support.ModelAndViewContainer;
 
 /**
- * Resuelve los parametros anotados con {@link CurrentKeyId} leyendo la identidad
+ * Resuelve los parametros anotados con {@link CurrentKeyId} leyendo el key_id
  * que {@link ApiKeyAuthFilter} dejo en la peticion.
  */
 public class CurrentKeyIdArgumentResolver implements HandlerMethodArgumentResolver {
@@ -19,13 +19,15 @@ public class CurrentKeyIdArgumentResolver implements HandlerMethodArgumentResolv
     }
 
     @Override
-    public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer mavContainer,
-                                  NativeWebRequest webRequest, WebDataBinderFactory binderFactory) {
-        AuthenticatedClient client = (AuthenticatedClient)
-                webRequest.getAttribute(AuthenticatedClient.REQUEST_ATTRIBUTE, NativeWebRequest.SCOPE_REQUEST);
-        if (client == null) {
+    public Object resolveArgument(
+            MethodParameter parameter,
+            ModelAndViewContainer mavContainer,
+            NativeWebRequest webRequest,
+            WebDataBinderFactory binderFactory) {
+        Object keyId = webRequest.getAttribute(ApiKeyAuthFilter.KEY_ID_ATTRIBUTE, NativeWebRequest.SCOPE_REQUEST);
+        if (keyId == null) {
             throw new IllegalStateException("No hay cliente autenticado en la peticion.");
         }
-        return client.keyId();
+        return keyId;
     }
 }

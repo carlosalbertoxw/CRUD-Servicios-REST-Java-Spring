@@ -1,13 +1,13 @@
 package com.carlosalbertoxw.notes.web;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.carlosalbertoxw.notes.support.TestProblems;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 import org.springframework.mock.web.MockFilterChain;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 /** Pruebas unitarias del limitador de peticiones por IP (ventana fija). */
 class RateLimitFilterTest {
@@ -51,8 +51,24 @@ class RateLimitFilterTest {
 
         assertThat(blocked.getStatus()).isEqualTo(429);
         assertThat(chainCalled[0]).isFalse();
-        assertThat(Integer.parseInt(blocked.getHeader(HttpHeaders.RETRY_AFTER)))
-                .isBetween(1, 60);
+        assertThat(Integer.parseInt(blocked.getHeader(HttpHeaders.RETRY_AFTER))).isBetween(1, 60);
+    }
+
+    @Test
+    void healthChecksDoNotConsumeQuota() throws Exception {
+        RateLimitFilter filter = new RateLimitFilter(1, 60, TestProblems.responder());
+
+        for (int i = 0; i < 3; i++) {
+            MockHttpServletRequest probe = new MockHttpServletRequest("GET", "/actuator/health/liveness");
+            probe.setRemoteAddr("10.0.0.9");
+            MockFilterChain chain = new MockFilterChain();
+            MockHttpServletResponse response = new MockHttpServletResponse();
+            filter.doFilter(probe, response, chain);
+            assertThat(response.getStatus()).isEqualTo(200);
+        }
+
+        boolean[] chainCalled = new boolean[1];
+        assertThat(call(filter, "10.0.0.9", chainCalled).getStatus()).isEqualTo(200);
     }
 
     @Test

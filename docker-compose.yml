@@ -1,7 +1,6 @@
 services:
   mysql:
     image: mysql:8.4
-    container_name: notes-mysql
     # Convencion del proyecto: todas las fechas se guardan en UTC.
     command: --default-time-zone=+00:00
     environment:
@@ -9,8 +8,9 @@ services:
       MYSQL_DATABASE: notes
       MYSQL_USER: notes_user          # usuario con DDL, reservado a las migraciones (Flyway)
       MYSQL_PASSWORD: notes_password
+    # 3307 en el host para poder correr a la vez los proyectos C# (3306) y PHP (3308).
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
       - notes-mysql-data:/var/lib/mysql
       - ./db/init-users.sql:/docker-entrypoint-initdb.d/init-users.sql:ro
@@ -21,18 +21,20 @@ services:
       retries: 10
       start_period: 10s
 
-  # Aplica el esquema (Flyway) con el usuario notes_user (DDL) y termina. Reusa la
-  # misma imagen de la app en el perfil 'migrate'; corre una sola vez cuando MySQL
-  # esta sano. Asi el proceso que sirve trafico nunca tiene credenciales con DDL.
+  # Aplica el esquema con la imagen oficial de Flyway (misma version mayor que
+  # usan las pruebas) y el usuario notes_user (DDL), y termina. El proceso que
+  # sirve trafico nunca tiene credenciales con DDL ni Flyway en su classpath.
   migrations:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    command: ["--spring.profiles.active=migrate"]
-    environment:
-      FLYWAY_DB_URL: "jdbc:mysql://mysql:3306/notes"
-      FLYWAY_DB_USER: notes_user
-      FLYWAY_DB_PASSWORD: notes_password
+    image: flyway/flyway:12
+    command: >-
+      -url=jdbc:mysql://mysql:3306/notes?allowPublicKeyRetrieval=true
+      -user=notes_user
+      -password=notes_password
+      -locations=filesystem:/flyway/sql
+      -connectRetries=10
+      migrate
+    volumes:
+      - ./src/main/resources/db/migration:/flyway/sql:ro
     depends_on:
       mysql:
         condition: service_healthy
@@ -45,9 +47,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: notes-api
+    # 8082 en el host: el proyecto C# usa 8080 y el PHP 8081.
     ports:
-      - "8080:8080"
+      - "8082:8080"
     environment:
       SPRING_PROFILES_ACTIVE: dev
       DB_URL: "jdbc:mysql://mysql:3306/notes"

@@ -10,6 +10,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Size;
+import java.net.URI;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -21,8 +22,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.util.UriComponentsBuilder;
-
-import java.net.URI;
 
 /**
  * Endpoints REST de notas. Todas las operaciones actuan sobre las notas del
@@ -55,7 +54,8 @@ public class NotesController {
     /** Obtiene una nota por su id, con su contenido completo. */
     @GetMapping("/{id}")
     public ResponseEntity<Note> get(@CurrentKeyId String ownerKeyId, @PathVariable int id) {
-        return repository.getById(ownerKeyId, id)
+        return repository
+                .getById(ownerKeyId, id)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
@@ -64,7 +64,9 @@ public class NotesController {
     @PostMapping
     public ResponseEntity<Note> create(@CurrentKeyId String ownerKeyId, @Valid @RequestBody NoteRequest request) {
         Note created = repository.create(ownerKeyId, request);
-        URI location = UriComponentsBuilder.fromPath("/api/notes/{id}").buildAndExpand(created.id()).toUri();
+        URI location = UriComponentsBuilder.fromPath("/api/notes/{id}")
+                .buildAndExpand(created.id())
+                .toUri();
         return ResponseEntity.created(location).body(created);
     }
 

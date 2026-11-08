@@ -1,11 +1,10 @@
 package com.carlosalbertoxw.notes.auth;
 
-import org.springframework.context.annotation.Primary;
-import org.springframework.stereotype.Repository;
-
 import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import org.springframework.context.annotation.Primary;
+import org.springframework.stereotype.Repository;
 
 /**
  * Decorador con cache en memoria sobre el repositorio de API keys: el caso
@@ -55,6 +54,5 @@ public class CachedApiKeyRepository implements ApiKeyRepository {
         usedCache.put(keyId, now + USED_TTL_NANOS);
     }
 
-    private record Entry<T>(T value, long expiresAt) {
-    }
+    private record Entry<T>(T value, long expiresAt) {}
 }

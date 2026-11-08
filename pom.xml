@@ -7,7 +7,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.1.0</version>
+        <version>4.1.2</version>
         <relativePath/>
     </parent>
 
@@ -16,20 +16,25 @@
     <version>2.0.0</version>
     <packaging>jar</packaging>
     <name>CRUD-Servicios-REST-Java-Spring</name>
-    <description>Servicio REST de notas con Spring Boot 3, MySQL, API keys, paginacion, busqueda y observabilidad</description>
+    <description>Servicio REST de notas con Spring Boot 4, MySQL, API keys, paginacion y busqueda</description>
+
+    <licenses>
+        <license>
+            <name>MIT</name>
+            <url>https://opensource.org/licenses/MIT</url>
+        </license>
+    </licenses>
 
     <properties>
-        <java.version>17</java.version>
+        <java.version>25</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <springdoc.version>3.0.3</springdoc.version>
+        <springdoc.version>3.2.0</springdoc.version>
+        <spotless.version>3.11.0</spotless.version>
+        <palantir-java-format.version>2.103.0</palantir-java-format.version>
         <!-- Permite ejecutar solo las pruebas de integracion:
              "mvn verify -DskipUnitTests=true". Se usa <skip> (y no <skipTests>)
-             para no pisar el -DskipTests que usa la auditoria de dependencias. -->
+             para no omitir tambien las de Failsafe. -->
         <skipUnitTests>false</skipUnitTests>
-        <!-- Boot 4.1.0 trae Tomcat 11.0.22, que tiene CVEs con CVSS >= 7
-             (CVE-2026-55276, -53434, -59083, -59084); 11.0.24 los corrige. -->
-        <tomcat.version>11.0.24</tomcat.version>
-        <dependency-check.version>12.2.2</dependency-check.version>
     </properties>
 
     <dependencies>
@@ -50,33 +55,35 @@
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
 
-        <!-- Migraciones de esquema (equivalente a DbUp): corren al arranque con el usuario DDL. -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-flyway</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.flywaydb</groupId>
-            <artifactId>flyway-mysql</artifactId>
-        </dependency>
-
         <dependency>
             <groupId>com.mysql</groupId>
             <artifactId>mysql-connector-j</artifactId>
             <scope>runtime</scope>
         </dependency>
 
-        <!-- OpenAPI 3 + UI interactiva (equivalente a Scalar). -->
+        <!-- OpenAPI 3 + UI interactiva. -->
         <dependency>
             <groupId>org.springdoc</groupId>
             <artifactId>springdoc-openapi-starter-webmvc-ui</artifactId>
             <version>${springdoc.version}</version>
         </dependency>
 
-        <!-- Pruebas de integracion: MySQL efimero con Testcontainers. -->
+        <!-- Pruebas. Flyway solo se usa aqui para preparar la BD efimera: en
+             despliegue las migraciones las aplica la imagen oficial de Flyway
+             (servicio "migrations" de docker-compose.yml), no la aplicacion. -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-flyway</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-mysql</artifactId>
             <scope>test</scope>
         </dependency>
         <dependency>
@@ -107,25 +114,20 @@
         </dependency>
     </dependencies>
 
-    <!-- Boot 4 ya no gestiona las versiones de Testcontainers: se importa su BOM
-         (alineado con la version que usa spring-boot-testcontainers). -->
-    <dependencyManagement>
-        <dependencies>
-            <dependency>
-                <groupId>org.testcontainers</groupId>
-                <artifactId>testcontainers-bom</artifactId>
-                <version>2.0.5</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
-
     <build>
         <plugins>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <executions>
+                    <!-- Genera META-INF/build-info.properties: la version de la
+                         documentacion OpenAPI sale de aqui (BuildProperties). -->
+                    <execution>
+                        <goals>
+                            <goal>build-info</goal>
+                        </goals>
+                    </execution>
+                </executions>
             </plugin>
 
             <!--
@@ -154,44 +156,24 @@
                     </execution>
                 </executions>
             </plugin>
+
+            <!-- Formato del codigo (palantir-java-format: 4 espacios, estilo cercano
+                 al de Google). Verificar: "mvn spotless:check"; aplicar:
+                 "mvn spotless:apply". -->
+            <plugin>
+                <groupId>com.diffplug.spotless</groupId>
+                <artifactId>spotless-maven-plugin</artifactId>
+                <version>${spotless.version}</version>
+                <configuration>
+                    <java>
+                        <palantirJavaFormat>
+                            <version>${palantir-java-format.version}</version>
+                        </palantirJavaFormat>
+                        <removeUnusedImports/>
+                    </java>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
-
-    <profiles>
-        <!--
-          Auditoria de dependencias vulnerables (OWASP dependency-check).
-          Se ejecuta bajo demanda: "mvn -Psecurity verify". En CI conviene pasar un
-          NVD_API_KEY (variable de entorno) para que la descarga de la base sea fiable.
-        -->
-        <profile>
-            <id>security</id>
-            <build>
-                <plugins>
-                    <plugin>
-                        <groupId>org.owasp</groupId>
-                        <artifactId>dependency-check-maven</artifactId>
-                        <version>${dependency-check.version}</version>
-                        <configuration>
-                            <!-- Falla el build si hay una vulnerabilidad con CVSS >= 7 (alta/critica). -->
-                            <failBuildOnCVSS>7</failBuildOnCVSS>
-                            <nvdApiKeyEnvironmentVariable>NVD_API_KEY</nvdApiKeyEnvironmentVariable>
-                            <!-- La API del NVD es inestable: mas pausa entre
-                                 peticiones y mas reintentos evitan que un 503
-                                 transitorio tumbe la descarga. -->
-                            <nvdApiDelay>4000</nvdApiDelay>
-                            <nvdMaxRetryCount>20</nvdMaxRetryCount>
-                        </configuration>
-                        <executions>
-                            <execution>
-                                <goals>
-                                    <goal>check</goal>
-                                </goals>
-                            </execution>
-                        </executions>
-                    </plugin>
-                </plugins>
-            </build>
-        </profile>
-    </profiles>
 
 </project>

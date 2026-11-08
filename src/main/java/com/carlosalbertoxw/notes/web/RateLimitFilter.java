@@ -4,19 +4,18 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.filter.OncePerRequestFilter;
-
 import java.io.IOException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
  * Rate limiting por IP con ventana fija: hasta {@code permitLimit} peticiones
  * por ventana de {@code windowSeconds}. Al excederlo responde 429 con
  * {@code Retry-After}. Cada IP es una particion independiente (equivalente al
- * {@code FixedWindowLimiter} por IP del proyecto de referencia).
+ * {@code FixedWindowLimiter} por IP del proyecto en C#).
  */
 public class RateLimitFilter extends OncePerRequestFilter {
 
@@ -31,6 +30,12 @@ public class RateLimitFilter extends OncePerRequestFilter {
         this.permitLimit = permitLimit;
         this.windowMillis = windowSeconds * 1000L;
         this.problems = problems;
+    }
+
+    /** Los sondeos del orquestador no deben competir con el trafico real. */
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        return request.getRequestURI().startsWith(request.getContextPath() + "/actuator/health");
     }
 
     @Override
@@ -52,7 +57,9 @@ public class RateLimitFilter extends OncePerRequestFilter {
         if (window.count > permitLimit) {
             long retryAfter = Math.max(1, (windowMillis - (now - window.start) + 999) / 1000);
             response.setHeader(HttpHeaders.RETRY_AFTER, Long.toString(retryAfter));
-            problems.write(response, HttpStatus.TOO_MANY_REQUESTS,
+            problems.write(
+                    response,
+                    HttpStatus.TOO_MANY_REQUESTS,
                     "Se supero el limite de peticiones. Reintenta en " + retryAfter + " segundos.");
             return;
         }

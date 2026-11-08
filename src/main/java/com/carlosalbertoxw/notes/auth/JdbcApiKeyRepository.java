@@ -1,12 +1,11 @@
 package com.carlosalbertoxw.notes.auth;
 
+import java.util.List;
+import java.util.Optional;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Repository;
-
-import java.util.List;
-import java.util.Optional;
 
 /**
  * Acceso a {@code api_keys} contra MySQL. La comparacion del secreto la hace
@@ -21,15 +20,13 @@ public class JdbcApiKeyRepository implements ApiKeyRepository {
         this.jdbc = jdbc;
     }
 
-    private static final RowMapper<ApiKey> MAPPER = (rs, i) -> new ApiKey(
-            rs.getString("key_id"),
-            rs.getBytes("key_hash"),
-            rs.getString("client_name"));
+    private static final RowMapper<ApiKey> MAPPER =
+            (rs, i) -> new ApiKey(rs.getString("key_id"), rs.getBytes("key_hash"));
 
     @Override
     public Optional<ApiKey> getActiveKey(String keyId) {
         List<ApiKey> rows = jdbc.query(
-                "SELECT key_id, key_hash, client_name FROM api_keys "
+                "SELECT key_id, key_hash FROM api_keys "
                         + "WHERE key_id = :keyId AND revoked_at IS NULL "
                         + "AND (expires_at IS NULL OR expires_at > UTC_TIMESTAMP())",
                 new MapSqlParameterSource("keyId", keyId),

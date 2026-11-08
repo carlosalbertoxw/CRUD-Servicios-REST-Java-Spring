@@ -5,81 +5,52 @@ on:
     branches: [master, "upgrade/**"]
   pull_request:
 
+# El token de GitHub solo necesita leer el codigo.
+permissions:
+  contents: read
+
 # Un push nuevo sobre la misma rama deja obsoleto al run anterior: cancelarlo
-# libera runners de inmediato (sobre todo la auditoria, que puede ocupar uno
-# durante una hora). En master no se cancela: cada commit integrado conserva su
-# propio resultado de CI.
+# libera runners de inmediato. En master no se cancela: cada commit integrado
+# conserva su propio resultado de CI.
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
 
 jobs:
-  # Va primero y SIN needs a proposito: es el job mas largo del workflow, asi
-  # que tiene que arrancar en el segundo cero y correr en paralelo con las
-  # pruebas. Encadenarlo detras de estas solo sumaria su duracion a la ruta
-  # critica sin ahorrar nada.
+  # OSV-Scanner resuelve el arbol de dependencias del pom.xml (directas y
+  # transitivas) y lo cruza con la base OSV: tarda segundos y no necesita API key.
   dependency-audit:
     name: Auditoria de dependencias
-    runs-on: ubuntu-latest
-    # La primera descarga completa de la base NVD tarda >30 min incluso con
-    # NVD_API_KEY; con la cache guardada, las siguientes ejecuciones bajan a
-    # unos minutos. El timeout evita cuelgues de horas si el NVD falla.
-    timeout-minutes: 60
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Configurar JDK 17
-        uses: actions/setup-java@v5
-        with:
-          distribution: temurin
-          java-version: "17"
-          cache: maven
-
-      # Cachea la base de datos de vulnerabilidades (NVD) entre ejecuciones para
-      # que la auditoria sea rapida y fiable.
-      # Restore/save separados con if:always(): aunque la descarga del NVD
-      # falle a medias (su API es inestable), el avance se guarda y el
-      # siguiente run REANUDA en vez de empezar de cero. La clave incluye el
-      # run_id porque una clave fija con hit exacto nunca re-guardaria la
-      # base actualizada; restore-keys recupera la mas reciente.
-      - name: Restaurar base NVD
-        uses: actions/cache/restore@v6
-        with:
-          path: ~/.m2/repository/org/owasp/dependency-check-data
-          key: dependency-check-${{ runner.os }}-${{ github.run_id }}
-          restore-keys: |
-            dependency-check-${{ runner.os }}-
-
-      # Bloquea el build si hay dependencias con CVEs (CVSS >= 7). Requiere el
-      # secreto NVD_API_KEY para que la descarga de la base NVD sea fiable
-      # (https://nvd.nist.gov/developers/request-an-api-key).
-      - name: Auditar dependencias vulnerables (OWASP dependency-check)
-        env:
-          NVD_API_KEY: ${{ secrets.NVD_API_KEY }}
-        run: mvn -B -Psecurity verify -DskipTests
-
-      - name: Guardar base NVD (incluso si la auditoria fallo)
-        if: always()
-        uses: actions/cache/save@v6
-        with:
-          path: ~/.m2/repository/org/owasp/dependency-check-data
-          key: dependency-check-${{ runner.os }}-${{ github.run_id }}
-
-  # Suite rapida (Surefire, clases *Test): logica pura, sin Spring ni Docker.
-  # Da feedback en menos de un minuto y es la que corta antes en un PR.
-  unit-tests:
-    name: Pruebas unitarias
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
 
-      - name: Configurar JDK 17
+      - name: Escanear dependencias vulnerables (OSV-Scanner)
+        uses: google/osv-scanner-action/osv-scanner-action@v2.7.0
+        with:
+          scan-args: |-
+            --recursive
+            ./
+
+  # Suite rapida (Surefire, clases *Test): logica pura, sin Spring ni Docker,
+  # mas la verificacion de formato. Da feedback en menos de un minuto.
+  unit-tests:
+    name: Formato y pruebas unitarias
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Configurar JDK 25
         uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: "25"
           cache: maven
+
+      - name: Verificar formato (Spotless)
+        run: mvn -B spotless:check
 
       - name: Ejecutar pruebas unitarias
         run: mvn -B test
@@ -107,11 +78,11 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Configurar JDK 17
+      - name: Configurar JDK 25
         uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: "17"
+          java-version: "25"
           cache: maven
 
       - name: Ejecutar pruebas de integracion

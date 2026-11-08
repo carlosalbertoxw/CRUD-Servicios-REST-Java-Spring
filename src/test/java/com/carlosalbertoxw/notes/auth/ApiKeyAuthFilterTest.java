@@ -1,20 +1,19 @@
 package com.carlosalbertoxw.notes.auth;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.carlosalbertoxw.notes.support.TestProblems;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockFilterChain;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
-
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Pruebas unitarias del filtro de autenticacion: se ejercita con dobles de
@@ -38,8 +37,8 @@ class ApiKeyAuthFilterTest {
 
     @Test
     void letsPublicPathsThroughWithoutKey() throws Exception {
-        for (String path : List.of("/", "/favicon.ico", "/actuator/health/readiness",
-                "/v3/api-docs", "/swagger-ui/index.html")) {
+        for (String path :
+                List.of("/", "/favicon.ico", "/actuator/health/readiness", "/v3/api-docs", "/swagger-ui/index.html")) {
             MockFilterChain chain = new MockFilterChain();
             MockHttpServletResponse response = new MockHttpServletResponse();
 
@@ -93,7 +92,7 @@ class ApiKeyAuthFilterTest {
 
     @Test
     void rejectsWrongSecretForExistingKey() throws Exception {
-        keys.store(new ApiKey(KEY_ID, sha256(SECRET), "Cliente 1"));
+        keys.store(new ApiKey(KEY_ID, sha256(SECRET)));
         MockFilterChain chain = new MockFilterChain();
         MockHttpServletResponse response = new MockHttpServletResponse();
         MockHttpServletRequest request = request("/api/notes");
@@ -108,7 +107,7 @@ class ApiKeyAuthFilterTest {
 
     @Test
     void authenticatesValidKeyAndPublishesClientIdentity() throws Exception {
-        keys.store(new ApiKey(KEY_ID, sha256(SECRET), "Cliente 1"));
+        keys.store(new ApiKey(KEY_ID, sha256(SECRET)));
         MockFilterChain chain = new MockFilterChain();
         MockHttpServletResponse response = new MockHttpServletResponse();
         MockHttpServletRequest request = request("/api/notes");
@@ -118,15 +117,14 @@ class ApiKeyAuthFilterTest {
 
         assertThat(chain.getRequest()).isNotNull();
         assertThat(response.getStatus()).isEqualTo(200);
-        assertThat(request.getAttribute(AuthenticatedClient.REQUEST_ATTRIBUTE))
-                .isEqualTo(new AuthenticatedClient(KEY_ID, "Cliente 1"));
+        assertThat(request.getAttribute(ApiKeyAuthFilter.KEY_ID_ATTRIBUTE)).isEqualTo(KEY_ID);
         assertThat(keys.registeredUses).containsExactly(KEY_ID);
     }
 
     @Test
     void secretMayContainDots() throws Exception {
         String dottedSecret = "parte1.parte2.parte3";
-        keys.store(new ApiKey(KEY_ID, sha256(dottedSecret), "Cliente 1"));
+        keys.store(new ApiKey(KEY_ID, sha256(dottedSecret)));
         MockFilterChain chain = new MockFilterChain();
         MockHttpServletRequest request = request("/api/notes");
         request.addHeader(ApiKeyAuthFilter.HEADER_NAME, KEY_ID + "." + dottedSecret);
@@ -138,7 +136,7 @@ class ApiKeyAuthFilterTest {
 
     @Test
     void failureRegisteringUseDoesNotBreakAuthentication() throws Exception {
-        keys.store(new ApiKey(KEY_ID, sha256(SECRET), "Cliente 1"));
+        keys.store(new ApiKey(KEY_ID, sha256(SECRET)));
         keys.failOnRegisterUse = true;
         MockFilterChain chain = new MockFilterChain();
         MockHttpServletResponse response = new MockHttpServletResponse();

@@ -33,15 +33,22 @@ public class DevDataSeeder implements ApplicationRunner {
         jdbc.update(
                 "INSERT IGNORE INTO api_keys (key_id, key_hash, client_name) "
                         + "VALUES (?, UNHEX(SHA2('dev-secret', 256)), ?)",
-                DEV_KEY_ID, "Desarrollo local");
+                DEV_KEY_ID,
+                "Desarrollo local");
 
-        Integer notesForDevKey = jdbc.queryForObject(
-                "SELECT COUNT(*) FROM notes WHERE owner_key_id = ?", Integer.class, DEV_KEY_ID);
+        Integer notesForDevKey =
+                jdbc.queryForObject("SELECT COUNT(*) FROM notes WHERE owner_key_id = ?", Integer.class, DEV_KEY_ID);
         if (notesForDevKey != null && notesForDevKey == 0) {
-            jdbc.update("INSERT INTO notes (owner_key_id, title, text) VALUES (?, ?, ?)",
-                    DEV_KEY_ID, "Nota de ejemplo 1", "Contenido de la primera nota de ejemplo.");
-            jdbc.update("INSERT INTO notes (owner_key_id, title, text) VALUES (?, ?, ?)",
-                    DEV_KEY_ID, "Nota de ejemplo 2", "Contenido de la segunda nota de ejemplo.");
+            jdbc.update(
+                    "INSERT INTO notes (owner_key_id, title, text) VALUES (?, ?, ?)",
+                    DEV_KEY_ID,
+                    "Nota de ejemplo 1",
+                    "Contenido de la primera nota de ejemplo.");
+            jdbc.update(
+                    "INSERT INTO notes (owner_key_id, title, text) VALUES (?, ?, ?)",
+                    DEV_KEY_ID,
+                    "Nota de ejemplo 2",
+                    "Contenido de la segunda nota de ejemplo.");
         }
         log.info("Datos de desarrollo listos (API key de dev: {}.dev-secret)", DEV_KEY_ID);
     }

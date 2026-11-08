@@ -11,8 +11,7 @@ public final class TestProblems {
 
     public static final JsonMapper JSON = JsonMapper.builder().build();
 
-    private TestProblems() {
-    }
+    private TestProblems() {}
 
     public static ProblemResponder responder() {
         return new ProblemResponder(JSON);

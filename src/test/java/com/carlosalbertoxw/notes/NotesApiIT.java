@@ -1,6 +1,9 @@
 package com.carlosalbertoxw.notes;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.carlosalbertoxw.notes.model.Note;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.resttestclient.TestRestTemplate;
@@ -20,10 +23,6 @@ import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
-
-import java.util.Map;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Pruebas de integracion de extremo a extremo: levantan un MySQL efimero con
@@ -86,22 +85,24 @@ class NotesApiIT {
         ResponseEntity<String> response = rest.getForEntity("/api/notes", String.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
         assertThat(response.getHeaders().getFirst(HttpHeaders.WWW_AUTHENTICATE)).isEqualTo("ApiKey");
+        // ProblemDetail sin campos vacios (p. ej. "instance": null).
+        assertThat(response.getBody()).doesNotContain("null");
     }
 
     @Test
     void rejectsInvalidSecret() {
         HttpHeaders headers = new HttpHeaders();
         headers.set("X-Api-Key", "local-dev.wrong-secret");
-        ResponseEntity<String> response = rest.exchange(
-                "/api/notes", HttpMethod.GET, new HttpEntity<>(headers), String.class);
+        ResponseEntity<String> response =
+                rest.exchange("/api/notes", HttpMethod.GET, new HttpEntity<>(headers), String.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
     }
 
     @Test
     void fullCrudCycle() {
         // Crear
-        ResponseEntity<Note> created = rest.exchange("/api/notes", HttpMethod.POST,
-                authed("{\"title\":\"Mi nota\",\"text\":\"Contenido\"}"), Note.class);
+        ResponseEntity<Note> created = rest.exchange(
+                "/api/notes", HttpMethod.POST, authed("{\"title\":\"Mi nota\",\"text\":\"Contenido\"}"), Note.class);
         assertThat(created.getStatusCode()).isEqualTo(HttpStatus.CREATED);
         assertThat(created.getHeaders().getLocation()).isNotNull();
         Note note = created.getBody();
@@ -113,43 +114,45 @@ class NotesApiIT {
         int id = note.id();
 
         // Obtener
-        ResponseEntity<Note> fetched = rest.exchange("/api/notes/" + id, HttpMethod.GET,
-                new HttpEntity<>(authHeaders()), Note.class);
+        ResponseEntity<Note> fetched =
+                rest.exchange("/api/notes/" + id, HttpMethod.GET, new HttpEntity<>(authHeaders()), Note.class);
         assertThat(fetched.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(fetched.getBody().text()).isEqualTo("Contenido");
 
         // Actualizar
-        ResponseEntity<Void> updated = rest.exchange("/api/notes/" + id, HttpMethod.PUT,
-                authed("{\"title\":\"Nuevo titulo\",\"text\":\"Nuevo contenido\"}"), Void.class);
+        ResponseEntity<Void> updated = rest.exchange(
+                "/api/notes/" + id,
+                HttpMethod.PUT,
+                authed("{\"title\":\"Nuevo titulo\",\"text\":\"Nuevo contenido\"}"),
+                Void.class);
         assertThat(updated.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
 
-        ResponseEntity<Note> afterUpdate = rest.exchange("/api/notes/" + id, HttpMethod.GET,
-                new HttpEntity<>(authHeaders()), Note.class);
+        ResponseEntity<Note> afterUpdate =
+                rest.exchange("/api/notes/" + id, HttpMethod.GET, new HttpEntity<>(authHeaders()), Note.class);
         assertThat(afterUpdate.getBody().title()).isEqualTo("Nuevo titulo");
 
         // Eliminar
-        ResponseEntity<Void> deleted = rest.exchange("/api/notes/" + id, HttpMethod.DELETE,
-                new HttpEntity<>(authHeaders()), Void.class);
+        ResponseEntity<Void> deleted =
+                rest.exchange("/api/notes/" + id, HttpMethod.DELETE, new HttpEntity<>(authHeaders()), Void.class);
         assertThat(deleted.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
 
-        ResponseEntity<String> afterDelete = rest.exchange("/api/notes/" + id, HttpMethod.GET,
-                new HttpEntity<>(authHeaders()), String.class);
+        ResponseEntity<String> afterDelete =
+                rest.exchange("/api/notes/" + id, HttpMethod.GET, new HttpEntity<>(authHeaders()), String.class);
         assertThat(afterDelete.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
     }
 
     @Test
     void rejectsInvalidBodyWith400() {
-        ResponseEntity<String> response = rest.exchange("/api/notes", HttpMethod.POST,
-                authed("{\"title\":\"\",\"text\":\"sin titulo\"}"), String.class);
+        ResponseEntity<String> response = rest.exchange(
+                "/api/notes", HttpMethod.POST, authed("{\"title\":\"\",\"text\":\"sin titulo\"}"), String.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThat(response.getHeaders().getContentType())
-                .isEqualTo(MediaType.APPLICATION_PROBLEM_JSON);
+        assertThat(response.getHeaders().getContentType()).isEqualTo(MediaType.APPLICATION_PROBLEM_JSON);
     }
 
     @Test
     void notFoundForMissingNote() {
-        ResponseEntity<String> response = rest.exchange("/api/notes/999999", HttpMethod.GET,
-                new HttpEntity<>(authHeaders()), String.class);
+        ResponseEntity<String> response =
+                rest.exchange("/api/notes/999999", HttpMethod.GET, new HttpEntity<>(authHeaders()), String.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
     }
 
@@ -157,31 +160,53 @@ class NotesApiIT {
     void keysetPaginationReturnsCursor() {
         // Crea 3 notas propias para asegurar mas de una pagina con pageSize=1.
         for (int i = 0; i < 3; i++) {
-            rest.exchange("/api/notes", HttpMethod.POST,
-                    authed("{\"title\":\"Paginada " + i + "\"}"), Note.class);
+            rest.exchange("/api/notes", HttpMethod.POST, authed("{\"title\":\"Paginada " + i + "\"}"), Note.class);
         }
-        ResponseEntity<Map> page = rest.exchange("/api/notes?pageSize=1", HttpMethod.GET,
-                new HttpEntity<>(authHeaders()), Map.class);
+        ResponseEntity<Map> page =
+                rest.exchange("/api/notes?pageSize=1", HttpMethod.GET, new HttpEntity<>(authHeaders()), Map.class);
         assertThat(page.getStatusCode()).isEqualTo(HttpStatus.OK);
         Map body = page.getBody();
         assertThat((java.util.List<?>) body.get("items")).hasSize(1);
         assertThat(body.get("nextAfterId")).isNotNull();
-        assertThat(((Number) body.get("totalCount")).longValue()).isGreaterThanOrEqualTo(3);
+        assertThat(body).doesNotContainKey("totalCount");
+
+        // En la ultima pagina el cursor viene explicitamente en null.
+        ResponseEntity<Map> last =
+                rest.exchange("/api/notes?pageSize=100", HttpMethod.GET, new HttpEntity<>(authHeaders()), Map.class);
+        assertThat(last.getBody()).containsEntry("nextAfterId", null);
+    }
+
+    @Test
+    void datesAreSerializedAsUtcWithZSuffix() {
+        ResponseEntity<Map> created =
+                rest.exchange("/api/notes", HttpMethod.POST, authed("{\"title\":\"Nota con fecha\"}"), Map.class);
+        assertThat(created.getStatusCode()).isEqualTo(HttpStatus.CREATED);
+        assertThat((String) created.getBody().get("createdAt")).endsWith("Z");
+        assertThat((String) created.getBody().get("updatedAt")).endsWith("Z");
+    }
+
+    @Test
+    void responsesIncludeNoSniffHeader() {
+        ResponseEntity<String> response = rest.getForEntity("/actuator/health/liveness", String.class);
+        assertThat(response.getHeaders().getFirst("X-Content-Type-Options")).isEqualTo("nosniff");
     }
 
     @Test
     void rejectsPageSizeOutOfRangeWith400() {
-        ResponseEntity<String> response = rest.exchange("/api/notes?pageSize=500", HttpMethod.GET,
-                new HttpEntity<>(authHeaders()), String.class);
+        ResponseEntity<String> response =
+                rest.exchange("/api/notes?pageSize=500", HttpMethod.GET, new HttpEntity<>(authHeaders()), String.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
     @Test
     void fullTextSearchFindsMatchingNote() {
-        rest.exchange("/api/notes", HttpMethod.POST,
-                authed("{\"title\":\"Receta\",\"text\":\"lleva zanahoria fresca\"}"), Note.class);
-        ResponseEntity<Map> result = rest.exchange("/api/notes?search=zanahoria", HttpMethod.GET,
-                new HttpEntity<>(authHeaders()), Map.class);
+        rest.exchange(
+                "/api/notes",
+                HttpMethod.POST,
+                authed("{\"title\":\"Receta\",\"text\":\"lleva zanahoria fresca\"}"),
+                Note.class);
+        ResponseEntity<Map> result = rest.exchange(
+                "/api/notes?search=zanahoria", HttpMethod.GET, new HttpEntity<>(authHeaders()), Map.class);
         assertThat(result.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat((java.util.List<?>) result.getBody().get("items")).isNotEmpty();
     }
@@ -191,23 +216,25 @@ class NotesApiIT {
         // Otra key con una nota propia, insertada directamente en la BD.
         jdbc.update("INSERT IGNORE INTO api_keys (key_id, key_hash, client_name) "
                 + "VALUES ('other-client', UNHEX(SHA2('other-secret', 256)), 'Otro cliente')");
-        jdbc.update("INSERT INTO notes (owner_key_id, title, text) "
-                + "VALUES ('other-client', 'Nota ajena', 'privada')");
+        jdbc.update(
+                "INSERT INTO notes (owner_key_id, title, text) " + "VALUES ('other-client', 'Nota ajena', 'privada')");
         Integer foreignId = jdbc.queryForObject(
-                "SELECT id FROM notes WHERE owner_key_id = 'other-client' ORDER BY id DESC LIMIT 1",
-                Integer.class);
+                "SELECT id FROM notes WHERE owner_key_id = 'other-client' ORDER BY id DESC LIMIT 1", Integer.class);
 
         // El cliente local-dev no puede verla.
-        ResponseEntity<String> response = rest.exchange("/api/notes/" + foreignId, HttpMethod.GET,
-                new HttpEntity<>(authHeaders()), String.class);
+        ResponseEntity<String> response =
+                rest.exchange("/api/notes/" + foreignId, HttpMethod.GET, new HttpEntity<>(authHeaders()), String.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
     }
 
     @Test
     void rejectsOversizedBodyWith413() {
         String hugeText = "a".repeat(1_100_000); // > 1 MB
-        ResponseEntity<String> response = rest.exchange("/api/notes", HttpMethod.POST,
-                authed("{\"title\":\"grande\",\"text\":\"" + hugeText + "\"}"), String.class);
+        ResponseEntity<String> response = rest.exchange(
+                "/api/notes",
+                HttpMethod.POST,
+                authed("{\"title\":\"grande\",\"text\":\"" + hugeText + "\"}"),
+                String.class);
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONTENT_TOO_LARGE);
     }
 

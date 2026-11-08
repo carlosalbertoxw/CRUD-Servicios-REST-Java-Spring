@@ -5,18 +5,17 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.filter.OncePerRequestFilter;
-
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.List;
 import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
  * Autenticacion por API key: el cliente envia
@@ -32,11 +31,13 @@ public class ApiKeyAuthFilter extends OncePerRequestFilter {
     public static final String HEADER_NAME = "X-Api-Key";
     public static final String SCHEME_NAME = "ApiKey";
 
+    /** Atributo de request donde el filtro deja el key_id del cliente autenticado. */
+    public static final String KEY_ID_ATTRIBUTE = "authenticatedKeyId";
+
     private static final Logger log = LoggerFactory.getLogger(ApiKeyAuthFilter.class);
 
     // Rutas exentas de autenticacion (documentacion, health checks y raiz).
-    private static final List<String> PUBLIC_PREFIXES = List.of(
-            "/actuator/health", "/v3/api-docs", "/swagger-ui");
+    private static final List<String> PUBLIC_PREFIXES = List.of("/actuator/health", "/v3/api-docs", "/swagger-ui");
 
     private final ApiKeyRepository apiKeys;
     private final ProblemResponder problems;
@@ -82,9 +83,7 @@ public class ApiKeyAuthFilter extends OncePerRequestFilter {
             log.warn("No se pudo registrar el uso de la key {}", key.keyId(), ex);
         }
 
-        request.setAttribute(
-                AuthenticatedClient.REQUEST_ATTRIBUTE,
-                new AuthenticatedClient(key.keyId(), key.clientName()));
+        request.setAttribute(KEY_ID_ATTRIBUTE, key.keyId());
         chain.doFilter(request, response);
     }
 

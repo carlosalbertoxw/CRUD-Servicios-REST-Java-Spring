@@ -7,6 +7,7 @@ import com.carlosalbertoxw.notes.web.ProblemResponder;
 import com.carlosalbertoxw.notes.web.RateLimitFilter;
 import com.carlosalbertoxw.notes.web.RateLimitProperties;
 import com.carlosalbertoxw.notes.web.RequestSizeLimitFilter;
+import com.carlosalbertoxw.notes.web.SecurityHeadersFilter;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
@@ -16,6 +17,7 @@ import org.springframework.core.Ordered;
 /**
  * Registra los filtros en orden explicito:
  * <ol>
+ *   <li>cabeceras de seguridad comunes ({@code nosniff}),</li>
  *   <li>HTTPS/HSTS (endurecimiento de transporte, opcional por configuracion),</li>
  *   <li>limite de tamano del cuerpo,</li>
  *   <li>rate limiting (protege incluso la autenticacion),</li>
@@ -26,10 +28,18 @@ import org.springframework.core.Ordered;
 public class FilterConfig {
 
     @Bean
+    public FilterRegistrationBean<SecurityHeadersFilter> securityHeadersFilter() {
+        var registration = new FilterRegistrationBean<>(new SecurityHeadersFilter());
+        registration.setOrder(Ordered.HIGHEST_PRECEDENCE);
+        registration.addUrlPatterns("/*");
+        return registration;
+    }
+
+    @Bean
     public FilterRegistrationBean<HttpsEnforcementFilter> httpsEnforcementFilter(
             @Value("${app.security.https-enforced:true}") boolean httpsEnforced) {
         var registration = new FilterRegistrationBean<>(new HttpsEnforcementFilter());
-        registration.setOrder(Ordered.HIGHEST_PRECEDENCE);
+        registration.setOrder(Ordered.HIGHEST_PRECEDENCE + 1);
         registration.addUrlPatterns("/*");
         registration.setEnabled(httpsEnforced);
         return registration;

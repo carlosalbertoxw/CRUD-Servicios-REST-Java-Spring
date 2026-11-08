@@ -4,7 +4,6 @@ import com.carlosalbertoxw.notes.model.Note;
 import com.carlosalbertoxw.notes.model.NoteRequest;
 import com.carlosalbertoxw.notes.model.NoteSummary;
 import com.carlosalbertoxw.notes.model.PagedResult;
-
 import java.util.Optional;
 
 /**

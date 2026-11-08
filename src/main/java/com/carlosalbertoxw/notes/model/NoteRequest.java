@@ -14,5 +14,4 @@ public record NoteRequest(
         String title,
 
         @Size(max = 100_000, message = "El contenido no puede superar los 100.000 caracteres.")
-        String text) {
-}
+        String text) {}

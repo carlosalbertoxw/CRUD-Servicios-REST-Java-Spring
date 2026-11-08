@@ -1,12 +1,11 @@
 package com.carlosalbertoxw.notes.auth;
 
-import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-
-import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.Test;
 
 /**
  * Pruebas unitarias del cache en memoria de API keys: se sustituye el
@@ -14,7 +13,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class CachedApiKeyRepositoryTest {
 
-    private static final ApiKey KEY = new ApiKey("cliente-1", new byte[32], "Cliente 1");
+    private static final ApiKey KEY = new ApiKey("cliente-1", new byte[32]);
 
     private final CountingJdbcRepository delegate = new CountingJdbcRepository();
 

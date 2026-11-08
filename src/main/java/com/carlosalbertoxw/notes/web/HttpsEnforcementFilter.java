@@ -4,9 +4,8 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.web.filter.OncePerRequestFilter;
-
 import java.io.IOException;
+import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
  * Endurecimiento de transporte para produccion (se activa con
@@ -26,15 +25,14 @@ public class HttpsEnforcementFilter extends OncePerRequestFilter {
 
         if (!request.isSecure()) {
             String query = request.getQueryString();
-            String target = "https://" + request.getServerName() + request.getRequestURI()
-                    + (query != null ? "?" + query : "");
+            String target =
+                    "https://" + request.getServerName() + request.getRequestURI() + (query != null ? "?" + query : "");
             response.setStatus(308); // Permanent Redirect
             response.setHeader("Location", target);
             return;
         }
 
-        response.setHeader("Strict-Transport-Security",
-                "max-age=" + HSTS_MAX_AGE_SECONDS + "; includeSubDomains");
+        response.setHeader("Strict-Transport-Security", "max-age=" + HSTS_MAX_AGE_SECONDS + "; includeSubDomains");
         chain.doFilter(request, response);
     }
 }

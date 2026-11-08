@@ -4,15 +4,19 @@ import com.carlosalbertoxw.notes.model.Note;
 import com.carlosalbertoxw.notes.model.NoteRequest;
 import com.carlosalbertoxw.notes.model.NoteSummary;
 import com.carlosalbertoxw.notes.model.PagedResult;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneOffset;
+import java.util.List;
+import java.util.Optional;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.stereotype.Repository;
-
-import java.util.List;
-import java.util.Optional;
 
 /**
  * Acceso a notas con Spring JDBC (ligero, estilo Dapper: SQL explicito, sin ORM).
@@ -28,17 +32,15 @@ public class JdbcNoteRepository implements NoteRepository {
     }
 
     private static final RowMapper<Note> NOTE_MAPPER = (rs, i) -> new Note(
-            rs.getInt("id"),
-            rs.getString("title"),
-            rs.getString("text"),
-            rs.getObject("created_at", java.time.LocalDateTime.class),
-            rs.getObject("updated_at", java.time.LocalDateTime.class));
+            rs.getInt("id"), rs.getString("title"), rs.getString("text"), utc(rs, "created_at"), utc(rs, "updated_at"));
 
-    private static final RowMapper<NoteSummary> SUMMARY_MAPPER = (rs, i) -> new NoteSummary(
-            rs.getInt("id"),
-            rs.getString("title"),
-            rs.getObject("created_at", java.time.LocalDateTime.class),
-            rs.getObject("updated_at", java.time.LocalDateTime.class));
+    private static final RowMapper<NoteSummary> SUMMARY_MAPPER = (rs, i) ->
+            new NoteSummary(rs.getInt("id"), rs.getString("title"), utc(rs, "created_at"), utc(rs, "updated_at"));
+
+    /** Las columnas DATETIME guardan UTC por convencion del esquema. */
+    private static Instant utc(ResultSet rs, String column) throws SQLException {
+        return rs.getObject(column, LocalDateTime.class).toInstant(ZoneOffset.UTC);
+    }
 
     @Override
     public PagedResult<NoteSummary> getPage(String ownerKeyId, int afterId, int pageSize, String search) {
@@ -50,9 +52,6 @@ public class JdbcNoteRepository implements NoteRepository {
                 .addValue("ownerKeyId", ownerKeyId)
                 .addValue("search", hasSearch ? search : null);
 
-        long totalCount = jdbc.queryForObject(
-                "SELECT COUNT(*) FROM notes WHERE " + filter, params, Long.class);
-
         // Keyset: se pide un elemento extra para saber si hay pagina siguiente.
         MapSqlParameterSource pageParams = new MapSqlParameterSource()
                 .addValues(params.getValues())
@@ -63,7 +62,8 @@ public class JdbcNoteRepository implements NoteRepository {
                 "SELECT id, title, created_at, updated_at "
                         + "FROM notes WHERE " + filter + " AND id > :afterId "
                         + "ORDER BY id LIMIT :limit",
-                pageParams, SUMMARY_MAPPER);
+                pageParams,
+                SUMMARY_MAPPER);
 
         boolean hasMore = items.size() > pageSize;
         if (hasMore) {
@@ -71,7 +71,7 @@ public class JdbcNoteRepository implements NoteRepository {
         }
         Integer nextAfterId = hasMore ? items.get(items.size() - 1).id() : null;
 
-        return new PagedResult<>(items, pageSize, totalCount, nextAfterId);
+        return new PagedResult<>(items, pageSize, nextAfterId);
     }
 
     @Override
@@ -103,8 +103,7 @@ public class JdbcNoteRepository implements NoteRepository {
     @Override
     public boolean update(String ownerKeyId, int id, NoteRequest request) {
         int rows = jdbc.update(
-                "UPDATE notes SET title = :title, text = :text "
-                        + "WHERE id = :id AND owner_key_id = :ownerKeyId",
+                "UPDATE notes SET title = :title, text = :text " + "WHERE id = :id AND owner_key_id = :ownerKeyId",
                 new MapSqlParameterSource()
                         .addValue("title", request.title())
                         .addValue("text", request.text())

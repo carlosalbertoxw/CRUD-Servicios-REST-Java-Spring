@@ -1,11 +1,11 @@
 package com.carlosalbertoxw.notes.web;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockFilterChain;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 /** Pruebas unitarias del redirect HTTP -> HTTPS y de la cabecera HSTS. */
 class HttpsEnforcementFilterTest {
@@ -52,7 +52,6 @@ class HttpsEnforcementFilterTest {
 
         assertThat(chain.getRequest()).isNotNull();
         assertThat(response.getStatus()).isEqualTo(200);
-        assertThat(response.getHeader("Strict-Transport-Security"))
-                .isEqualTo("max-age=31536000; includeSubDomains");
+        assertThat(response.getHeader("Strict-Transport-Security")).isEqualTo("max-age=31536000; includeSubDomains");
     }
 }

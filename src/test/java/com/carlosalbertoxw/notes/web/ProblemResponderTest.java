@@ -1,14 +1,13 @@
 package com.carlosalbertoxw.notes.web;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.carlosalbertoxw.notes.support.TestProblems;
+import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.mock.web.MockHttpServletResponse;
-
-import java.util.Map;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 /** Pruebas unitarias del escritor de errores RFC 7807 usado por los filtros. */
 class ProblemResponderTest {
