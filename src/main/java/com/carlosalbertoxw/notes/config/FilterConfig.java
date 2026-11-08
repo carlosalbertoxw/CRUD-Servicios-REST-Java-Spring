@@ -8,6 +8,7 @@ import com.carlosalbertoxw.notes.web.RateLimitFilter;
 import com.carlosalbertoxw.notes.web.RateLimitProperties;
 import com.carlosalbertoxw.notes.web.RequestSizeLimitFilter;
 import com.carlosalbertoxw.notes.web.SecurityHeadersFilter;
+import java.util.List;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
@@ -37,8 +38,10 @@ public class FilterConfig {
 
     @Bean
     public FilterRegistrationBean<HttpsEnforcementFilter> httpsEnforcementFilter(
-            @Value("${app.security.https-enforced:true}") boolean httpsEnforced) {
-        var registration = new FilterRegistrationBean<>(new HttpsEnforcementFilter());
+            @Value("${app.security.https-enforced:true}") boolean httpsEnforced,
+            @Value("${app.security.allowed-hosts:}") List<String> allowedHosts,
+            ProblemResponder problems) {
+        var registration = new FilterRegistrationBean<>(new HttpsEnforcementFilter(allowedHosts, problems));
         registration.setOrder(Ordered.HIGHEST_PRECEDENCE + 1);
         registration.addUrlPatterns("/*");
         registration.setEnabled(httpsEnforced);

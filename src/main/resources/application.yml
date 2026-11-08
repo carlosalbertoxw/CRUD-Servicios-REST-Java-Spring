@@ -36,9 +36,13 @@ server:
 # Endurecimiento para produccion. Se desactiva en el perfil 'dev' (ver
 # application-dev.yml) y en las pruebas. Con https-enforced=true la app redirige
 # HTTP -> HTTPS (308) y emite HSTS; asume TLS terminado en el reverse proxy.
+# La redireccion solo apunta a los hosts de allowed-hosts (lista separada por
+# comas, variable APP_SECURITY_ALLOWED_HOSTS); una peticion HTTP con otro Host
+# recibe 400 en lugar de redirigirse (evita un open redirect).
 app:
   security:
     https-enforced: true
+    allowed-hosts: ${APP_SECURITY_ALLOWED_HOSTS:}
   # Tamano maximo del cuerpo de la peticion (las notas se limitan a 100.000
   # caracteres; no hay razon para aceptar cuerpos mayores a ~1 MB).
   max-request-body-bytes: 1048576

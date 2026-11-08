@@ -11,7 +11,16 @@ updates:
     schedule:
       interval: weekly
 
+  # Las imagenes del Dockerfile usan tags flotantes de la linea LTS
+  # (maven:3-eclipse-temurin-25, eclipse-temurin:25-jre-alpine): los parches del
+  # JDK llegan solos al reconstruir. Lo unico que Dependabot propondria es saltar
+  # a otra version mayor del JDK, incluidas las no LTS (26, 27...), y el proyecto
+  # sigue la linea LTS (java.version del pom). El salto al siguiente LTS se hace a
+  # mano, cambiando a la vez el pom, el CI y este Dockerfile.
   - package-ecosystem: docker
     directory: "/"
     schedule:
       interval: weekly
+    ignore:
+      - dependency-name: "maven"
+      - dependency-name: "eclipse-temurin"

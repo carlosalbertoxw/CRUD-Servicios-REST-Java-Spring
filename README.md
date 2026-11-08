@@ -260,6 +260,7 @@ Cuando la auditoría falla, de preferible a último recurso:
 | `rate-limiting.window-seconds` | `RATE_LIMITING_WINDOW_SECONDS` | Tamaño de la ventana en segundos (default 60). |
 | `authentication.key-cache-seconds` | `AUTHENTICATION_KEY_CACHE_SECONDS` | TTL del cache en memoria de API keys (default 60). |
 | `app.security.https-enforced` | `APP_SECURITY_HTTPS_ENFORCED` | Redirige HTTP→HTTPS (308) y emite HSTS (default `true`; el perfil `dev` lo pone en `false`). |
+| `app.security.allowed-hosts` | `APP_SECURITY_ALLOWED_HOSTS` | Hosts públicos de la API, separados por comas (p. ej. `api.example.com`). La redirección a HTTPS solo apunta a uno de ellos; una petición HTTP con otro `Host` recibe `400` (evita un *open redirect*). Vacío por defecto: sin configurarlo, toda petición HTTP recibe `400`. |
 | `app.max-request-body-bytes` | `APP_MAX_REQUEST_BODY_BYTES` | Tamaño máximo del cuerpo de la petición (default 1048576). |
 | `spring.threads.virtual.enabled` | `SPRING_THREADS_VIRTUAL_ENABLED` | Atiende cada petición en un hilo virtual (default `true`). |
 | `server.tomcat.remoteip.internal-proxies` | `SERVER_TOMCAT_REMOTEIP_INTERNAL_PROXIES` | Regex de IPs de reverse proxies confiables para leer `X-Forwarded-*` (default: rangos privados). |
@@ -282,7 +283,7 @@ commitees. Ejecuta las migraciones como paso de despliegue (la imagen
 `flyway/flyway` apuntando a `src/main/resources/db/migration`) antes de arrancar
 la API. La app asume TLS
 terminado en un reverse proxy: por defecto (`app.security.https-enforced=true`)
-redirige HTTP→HTTPS y emite HSTS, y con `server.forward-headers-strategy=native`
+redirige HTTP→HTTPS hacia los hosts de `app.security.allowed-hosts` y emite HSTS, y con `server.forward-headers-strategy=native`
 lee `X-Forwarded-*` **solo desde proxies confiables** — declara los tuyos en
 `server.tomcat.remoteip.internal-proxies` para que la IP del cliente (rate
 limiting) y el esquema sean los reales. El perfil `dev` (que siembra la key de
